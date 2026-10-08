@@ -104,6 +104,8 @@
   - **폰에서 바로 받는 고정 주소**(항상 최신): https://github.com/zent1216/leakcall/releases/download/english-step-latest/english_step.apk
     (빌드마다 `english-step-latest` 릴리스를 지우고 다시 만든다. 저장소가 비공개면 GitHub 로그인 필요)
   - 같은 APK가 Actions → 해당 실행 → Artifacts에도 있다(30일 보관). 디스크가 빠듯해 debug APK는 빌드하지 않는다.
+- **요즘 폰(arm64-v8a)만 지원** (대상: 갤럭시 A36, S25 등): build.gradle.kts의 `abiFilters`와 Actions의 `--target-platform android-arm64`로
+  구형 32비트폰·x86 에뮬레이터용 코드를 뺐다(용량 절감). 에뮬레이터로 테스트하려면 arm64 이미지를 쓰거나 abiFilters를 잠시 풀 것.
 - **서명 키 고정**: `android/app/ci-debug.keystore`(비밀번호 android, 테스트 전용)를 PC 빌드와 Actions 빌드가 같이 쓴다.
   그래서 어디서 빌드하든 폰에서 삭제 없이 업데이트된다. 이 키를 쓰기 전에 PC 기본 디버그 키로 설치한 앱은 한 번 삭제 후 설치해야 한다.
   Play 배포 시에는 별도 업로드 키를 만들어야 한다(이 키는 저장소에 커밋돼 있으므로 배포용으로 쓰지 말 것).

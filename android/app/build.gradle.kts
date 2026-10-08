@@ -28,6 +28,10 @@ android {
         // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        // 요즘 폰(64비트 ARM)만 지원. 구형 32비트폰·x86 에뮬레이터용 코드를 빼서 APK 용량을 줄인다.
+        ndk {
+            abiFilters += listOf("arm64-v8a")
+        }
     }
 
     // 테스트용 고정 서명 키. PC 빌드와 GitHub Actions 빌드가 같은 키로 서명돼야
