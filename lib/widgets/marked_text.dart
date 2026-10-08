@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../app_state.dart';
 import '../models.dart';
 import '../theme.dart';
+import 'speak_check_sheet.dart';
 
 /// `[표현|뜻]` 표시가 들어간 영어 문장. 학습 포인트는 형광펜으로 칠하고, 누르면 뜻 바텀시트를 띄운다.
 class MarkedText extends StatefulWidget {
@@ -75,6 +76,8 @@ Future<void> showGlossSheet(BuildContext context, String word, String gloss, Str
                   icon: const Icon(Icons.volume_up),
                   onPressed: () => Speaker.instance.speak(word, rate: state.speechRate),
                 ),
+                const SizedBox(width: 4),
+                SpeakCheckButton(word, ko: gloss),
               ],
             ),
             const SizedBox(height: 8),

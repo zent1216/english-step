@@ -8,38 +8,105 @@ import '../models.dart';
 import '../pronunciation.dart';
 import '../theme.dart';
 
-/// 따라 말하기 버튼. 누르면 [showSpeakCheckSheet]가 열린다.
+/// 말하기(따라 말하기) 버튼. 듣기 버튼 옆에 짝으로 둔다. 누르면 [showSpeakCheckSheet]가 열린다.
 class SpeakCheckButton extends StatelessWidget {
-  const SpeakCheckButton(this.target, {super.key, this.ko = ''});
+  const SpeakCheckButton(this.target,
+      {super.key, this.ko = '', this.quiz = false, this.onBeforeOpen});
+  final String target;
+  final String ko;
+
+  /// true면 영어를 숨기고 한국어 뜻만 보고 말하게 한다.
+  final bool quiz;
+
+  /// 시트를 열기 전에 할 일(예: 노래 일시정지).
+  final VoidCallback? onBeforeOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return IconButton.filledTonal(
+      tooltip: '말하기(발음 체크)',
+      visualDensity: VisualDensity.compact,
+      style: IconButton.styleFrom(
+        backgroundColor: scheme.tertiaryContainer,
+        foregroundColor: scheme.onTertiaryContainer,
+      ),
+      icon: const Icon(Icons.mic, size: 20),
+      onPressed: () {
+        onBeforeOpen?.call();
+        showSpeakCheckSheet(context, target, ko: ko, quiz: quiz);
+      },
+    );
+  }
+}
+
+/// 글자가 달린 "듣기 / 말하기" 버튼 한 쌍. 카드나 바텀시트처럼 자리가 넉넉한 곳에 쓴다.
+class ListenSpeakButtons extends StatelessWidget {
+  const ListenSpeakButtons(this.target, {super.key, this.ko = ''});
   final String target;
   final String ko;
 
   @override
-  Widget build(BuildContext context) => IconButton(
-        tooltip: '따라 말하기(발음 체크)',
-        visualDensity: VisualDensity.compact,
-        icon: Icon(Icons.mic_none, color: Theme.of(context).colorScheme.primary),
-        onPressed: () => showSpeakCheckSheet(context, target, ko: ko),
-      );
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      alignment: WrapAlignment.center,
+      children: [
+        FilledButton.tonalIcon(
+          icon: const Icon(Icons.volume_up),
+          label: const Text('듣기'),
+          onPressed: () => Speaker.instance.speak(target, rate: AppState.instance.speechRate),
+        ),
+        FilledButton.icon(
+          style: FilledButton.styleFrom(
+            backgroundColor: scheme.tertiary,
+            foregroundColor: scheme.onTertiary,
+          ),
+          icon: const Icon(Icons.mic),
+          label: const Text('말하기'),
+          onPressed: () => showSpeakCheckSheet(context, target, ko: ko),
+        ),
+      ],
+    );
+  }
 }
 
-Future<void> showSpeakCheckSheet(BuildContext context, String target, {String ko = ''}) {
+/// 따라 말하기 시트를 연다. [quiz]면 영어 정답을 숨기고 한국어 뜻만 보여준 채 말하게 한다.
+/// 시트가 닫히면 이번에 받은 최고 점수(0~100, 한 번도 안 했으면 null)를 돌려준다.
+Future<int?> showSpeakCheckSheet(BuildContext context, String target,
+    {String ko = '', bool quiz = false}) async {
   Speaker.instance.stop();
-  return showModalBottomSheet(
+  int? best;
+  await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
-    builder: (_) => _SpeakCheckSheet(target: target, ko: ko),
+    builder: (_) => _SpeakCheckSheet(
+      target: target,
+      ko: ko,
+      quiz: quiz,
+      onBest: (v) => best = v,
+    ),
   );
+  return best;
 }
 
 // 앱 전체에서 하나만 쓴다(초기화는 처음 한 번).
 final _stt = SpeechToText();
 
 class _SpeakCheckSheet extends StatefulWidget {
-  const _SpeakCheckSheet({required this.target, required this.ko});
+  const _SpeakCheckSheet({
+    required this.target,
+    required this.ko,
+    required this.quiz,
+    required this.onBest,
+  });
   final String target;
   final String ko;
+  final bool quiz;
+  final ValueChanged<int> onBest;
 
   @override
   State<_SpeakCheckSheet> createState() => _SpeakCheckSheetState();
@@ -125,6 +192,7 @@ class _SpeakCheckSheetState extends State<_SpeakCheckSheet> {
       _result = r;
       if (heard.trim().isNotEmpty && (_best == null || r.score > _best!)) _best = r.score;
     });
+    if (_best != null) widget.onBest(_best!);
   }
 
   @override
@@ -138,12 +206,18 @@ class _SpeakCheckSheetState extends State<_SpeakCheckSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('따라 말하기', style: Theme.of(context).textTheme.titleMedium),
+            Text(widget.quiz ? '영어로 말해보세요' : '따라 말하기',
+                style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 4),
-            Text('듣고 → 마이크를 누르고 따라 말해보세요. 폰이 알아들은 단어는 초록, 못 알아들은 단어는 빨강으로 표시돼요.',
+            Text(
+                widget.quiz
+                    ? '뜻을 보고 영어로 말하면 정답과 비교해요. 80% 이상이면 정답!'
+                    : '듣고 → 마이크를 누르고 따라 말해보세요. 폰이 알아들은 단어는 초록, 못 알아들은 단어는 빨강으로 표시돼요.',
                 style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant)),
             const SizedBox(height: 16),
-            if (r == null)
+            if (widget.quiz && r == null)
+              Text(widget.ko, style: Theme.of(context).textTheme.titleLarge)
+            else if (r == null)
               Text(plainText(widget.target), style: englishStyle(context, size: 21))
             else
               Wrap(
@@ -166,7 +240,7 @@ class _SpeakCheckSheetState extends State<_SpeakCheckSheet> {
                     ),
                 ],
               ),
-            if (widget.ko.isNotEmpty) ...[
+            if (widget.ko.isNotEmpty && !(widget.quiz && r == null)) ...[
               const SizedBox(height: 4),
               Text(widget.ko, style: TextStyle(color: scheme.onSurfaceVariant)),
             ],
@@ -206,6 +280,16 @@ class _SpeakCheckSheetState extends State<_SpeakCheckSheet> {
               ),
               if (_best != null)
                 Text('최고 기록 $_best%', style: TextStyle(fontSize: 12, color: scheme.outline)),
+              if (widget.quiz) ...[
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('확인'),
+                  ),
+                ),
+              ],
             ],
             if (_error != null) ...[
               const SizedBox(height: 12),
@@ -218,7 +302,7 @@ class _SpeakCheckSheetState extends State<_SpeakCheckSheet> {
                   child: OutlinedButton.icon(
                     icon: const Icon(Icons.volume_up),
                     label: const Text('듣기'),
-                    onPressed: _listening
+                    onPressed: _listening || (widget.quiz && r == null)
                         ? null
                         : () => Speaker.instance
                             .speak(widget.target, rate: AppState.instance.speechRate),

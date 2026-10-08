@@ -147,7 +147,7 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
           const SizedBox(height: 8),
           Text(
             _speakMode
-                ? '한국어를 보고 영어로 소리 내어 말해본 뒤, 눌러서 정답을 확인하세요.'
+                ? '한국어를 보고 🎤를 눌러 영어로 말해보세요. 카드를 누르면 정답이 보여요.'
                 : '영어를 듣고 뜻을 떠올려 본 뒤, 눌러서 해석을 확인하세요.',
             style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
@@ -228,7 +228,8 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
                       icon: Icon(Icons.volume_up_outlined, color: scheme.primary),
                       onPressed: () => _speak(s.en),
                     ),
-                  if (!_speakMode || open) SpeakCheckButton(s.en, ko: s.ko),
+                  // 말해보기 모드에서 정답을 열기 전에는 한국어만 보고 영어로 말해본다.
+                  SpeakCheckButton(s.en, ko: s.ko, quiz: _speakMode && !open),
                   ListenableBuilder(
                     listenable: AppState.instance,
                     builder: (context, _) {

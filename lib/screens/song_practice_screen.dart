@@ -10,6 +10,7 @@ import '../song_search.dart';
 import '../theme.dart';
 import '../translate.dart';
 import '../widgets/marked_text.dart';
+import '../widgets/speak_check_sheet.dart';
 
 const _rates = [0.5, 0.75, 0.9, 1.0, 1.25];
 const _stageNames = ['전체', '빈칸', '첫 글자', '숨기기'];
@@ -671,6 +672,8 @@ class _SongPracticeScreenState extends State<SongPracticeScreen> {
                   ],
                 ),
               ),
+              // 가사 한 줄 따라 말하기. 음악과 겹치면 인식이 안 되므로 먼저 멈춘다.
+              SpeakCheckButton(l.en, ko: l.ko, onBeforeOpen: _pause),
               if (_stage > 0)
                 IconButton(
                   tooltip: revealed ? '가리기' : '정답 보기',

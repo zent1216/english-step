@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../app_state.dart';
 import '../models.dart';
 import '../theme.dart';
+import '../widgets/speak_check_sheet.dart';
 
 /// 단어장: 오늘 복습할 개수, 복습 시작, 전체 목록(듣기/삭제).
 class VocabScreen extends StatelessWidget {
@@ -128,6 +129,7 @@ class _VocabTile extends StatelessWidget {
             onPressed: () =>
                 Speaker.instance.speak(item.word, rate: AppState.instance.speechRate),
           ),
+          SpeakCheckButton(item.word, ko: item.gloss),
           IconButton(
             tooltip: '삭제',
             icon: const Icon(Icons.delete_outline),
@@ -164,6 +166,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
   late final int _total = _queue.length;
   int _known = 0;
   bool _flipped = false;
+  bool _speakMode = false; // true: 한국어 뜻을 보고 영어로 말해서 답하기(말해보카 방식)
 
   void _answer(bool known) {
     final item = _queue.removeAt(0);
@@ -176,6 +179,20 @@ class _ReviewScreenState extends State<ReviewScreen> {
       }
       _flipped = false;
     });
+  }
+
+  /// 말해서 답하기: 80% 이상 알아들으면 정답(알아요) 처리, 아니면 정답을 보여준다.
+  Future<void> _speakAnswer(VocabItem item) async {
+    final score = await showSpeakCheckSheet(context, item.word, ko: item.gloss, quiz: true);
+    if (!mounted || score == null) return;
+    final messenger = ScaffoldMessenger.of(context)..hideCurrentSnackBar();
+    if (score >= 80) {
+      messenger.showSnackBar(SnackBar(content: Text('정답! $score%')));
+      _answer(true);
+    } else {
+      messenger.showSnackBar(SnackBar(content: Text('$score% · 정답을 확인하고 골라주세요')));
+      setState(() => _flipped = true);
+    }
   }
 
   @override
@@ -212,7 +229,20 @@ class _ReviewScreenState extends State<ReviewScreen> {
       child: Column(
         children: [
           LinearProgressIndicator(value: _known / _total),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
+          SegmentedButton<bool>(
+            showSelectedIcon: false,
+            segments: const [
+              ButtonSegment(value: false, label: Text('보고 떠올리기'), icon: Icon(Icons.visibility)),
+              ButtonSegment(value: true, label: Text('말해서 답하기'), icon: Icon(Icons.mic)),
+            ],
+            selected: {_speakMode},
+            onSelectionChanged: (v) => setState(() {
+              _speakMode = v.first;
+              _flipped = false;
+            }),
+          ),
+          const SizedBox(height: 12),
           Expanded(
             child: Card(
               child: Padding(
@@ -220,18 +250,20 @@ class _ReviewScreenState extends State<ReviewScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      item.word,
-                      textAlign: TextAlign.center,
-                      style: englishStyle(context, size: 28).copyWith(height: 1.3),
-                    ),
-                    const SizedBox(height: 8),
-                    IconButton.filledTonal(
-                      tooltip: '듣기',
-                      icon: const Icon(Icons.volume_up),
-                      onPressed: () =>
-                          Speaker.instance.speak(item.word, rate: AppState.instance.speechRate),
-                    ),
+                    if (_speakMode && !_flipped) ...[
+                      Text(item.gloss, textAlign: TextAlign.center, style: text.headlineSmall),
+                      const SizedBox(height: 12),
+                      Text('이 뜻을 영어로 말해보세요',
+                          style: TextStyle(color: scheme.onSurfaceVariant)),
+                    ] else ...[
+                      Text(
+                        item.word,
+                        textAlign: TextAlign.center,
+                        style: englishStyle(context, size: 28).copyWith(height: 1.3),
+                      ),
+                      const SizedBox(height: 12),
+                      ListenSpeakButtons(item.word, ko: item.gloss),
+                    ],
                     if (_flipped) ...[
                       const Divider(height: 40),
                       Text(item.gloss, textAlign: TextAlign.center, style: text.titleLarge),
@@ -271,13 +303,33 @@ class _ReviewScreenState extends State<ReviewScreen> {
                       ),
                     ],
                   )
-                : SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.tonal(
-                      onPressed: () => setState(() => _flipped = true),
-                      child: const Text('뜻 보기'),
-                    ),
-                  ),
+                : _speakMode
+                    ? Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => setState(() => _flipped = true),
+                              child: const Text('정답 보기'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 2,
+                            child: FilledButton.icon(
+                              icon: const Icon(Icons.mic),
+                              label: const Text('말해서 답하기'),
+                              onPressed: () => _speakAnswer(item),
+                            ),
+                          ),
+                        ],
+                      )
+                    : SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.tonal(
+                          onPressed: () => setState(() => _flipped = true),
+                          child: const Text('뜻 보기'),
+                        ),
+                      ),
           ),
         ],
       ),

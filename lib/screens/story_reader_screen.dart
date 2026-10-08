@@ -155,13 +155,13 @@ class _StoryReaderScreenState extends State<StoryReaderScreen> {
               ),
             ),
           ),
-          SpeakCheckButton(s.en, ko: s.ko),
           IconButton(
             tooltip: '이 문장 듣기',
             visualDensity: VisualDensity.compact,
             icon: Icon(Icons.volume_up_outlined, color: scheme.primary),
             onPressed: () => _speakOne(i),
           ),
+          SpeakCheckButton(s.en, ko: s.ko),
         ],
       ),
     );
