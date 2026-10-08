@@ -66,6 +66,23 @@ flutter:
   assets:
     - assets/tatoeba_lv0.json
 
+  # 무료 공개 글꼴(SIL OFL 1.1). 라이선스: assets/fonts/*-OFL.txt
+  fonts:
+    - family: Pretendard
+      fonts:
+        - asset: assets/fonts/Pretendard-Regular.otf
+        - asset: assets/fonts/Pretendard-Medium.otf
+          weight: 500
+        - asset: assets/fonts/Pretendard-Bold.otf
+          weight: 700
+    - family: Literata
+      fonts:
+        - asset: assets/fonts/Literata-400.ttf
+        - asset: assets/fonts/Literata-400-italic.ttf
+          style: italic
+        - asset: assets/fonts/Literata-600.ttf
+          weight: 600
+
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg

@@ -6,8 +6,9 @@ import 'package:flutter/material.dart';
 const _ink = Color(0xFF24477F);
 const _inkDark = Color(0xFFA9C2EE);
 
-/// 영어 본문용 세리프(기기 기본 세리프, 안드로이드는 Noto Serif). 별도 글꼴 다운로드 없음.
-const englishFont = 'serif';
+/// 영어 본문용 세리프(Literata, 전자책용 읽기 글꼴). 한글 UI는 Pretendard. 둘 다 앱에 포함(SIL OFL).
+const englishFont = 'Literata';
+const uiFont = 'Pretendard';
 const monoFont = 'monospace';
 
 ThemeData buildTheme(Brightness b) {
@@ -19,6 +20,7 @@ ThemeData buildTheme(Brightness b) {
     surface: dark ? const Color(0xFF181D24) : const Color(0xFFF9FAFB),
   );
   return ThemeData(
+    fontFamily: uiFont,
     colorScheme: scheme,
     scaffoldBackgroundColor: dark ? const Color(0xFF11151A) : const Color(0xFFE9EDF1),
     appBarTheme: AppBarTheme(
@@ -49,6 +51,7 @@ Color currentLineColor(BuildContext context) =>
 
 TextStyle englishStyle(BuildContext context, {double size = 18}) => TextStyle(
       fontFamily: englishFont,
+      fontFamilyFallback: const [uiFont], // Literata에 없는 한글 등은 Pretendard로
       fontSize: size,
       height: 1.55,
       color: Theme.of(context).colorScheme.onSurface,
