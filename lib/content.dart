@@ -1,0 +1,105 @@
+/// 앱에 기본으로 들어있는 학습 콘텐츠. 서버 없이 오프라인으로 동작한다.
+library;
+
+import 'models.dart';
+
+const stories = <Story>[
+  Story(
+    id: 'coffee',
+    level: 1,
+    levelName: '입문',
+    title: 'A Coffee, Please',
+    titleKo: '커피 한 잔 주세요',
+    keyExpression: 'Can I have ~, please?',
+    keyExpressionKo: '~ 주시겠어요? (가장 무난한 주문 표현)',
+    sentences: [
+      Sentence('Mina [walks into|~에 걸어 들어가다] a small coffee shop.', '미나는 작은 커피숍에 들어간다.'),
+      Sentence('"Hi! [What can I get for you?|뭘 드릴까요? (주문 받을 때)]" the barista asks.', '"안녕하세요! 뭘 드릴까요?" 바리스타가 묻는다.'),
+      Sentence('"[Can I have|~ 주시겠어요? (주문할 때)] an iced latte, please?"', '"아이스 라테 한 잔 주시겠어요?"'),
+      Sentence('"Sure. [For here or to go?|드시고 가세요, 가져가세요?]"', '"네. 드시고 가세요, 가져가세요?"'),
+      Sentence('"[To go|포장이요, 가져갈게요], please."', '"가져갈게요."'),
+      Sentence('"That\'s four dollars."', '"4달러입니다."'),
+      Sentence('Mina [pays|돈을 내다] and waits [by the window|창가에서].', '미나는 계산하고 창가에서 기다린다.'),
+      Sentence('[A minute later|1분 뒤], she hears her name.', '1분 뒤, 자기 이름이 불리는 게 들린다.'),
+    ],
+    quiz: Quiz('미나는 커피를 어떻게 했나요?', ['매장에서 마셨다', '가져갔다(포장)', '주문을 취소했다'], 1),
+  ),
+  Story(
+    id: 'late',
+    level: 2,
+    levelName: '초급',
+    title: 'Running Late',
+    titleKo: '늦어서 죄송해요',
+    keyExpression: "I'm running late.",
+    keyExpressionKo: '좀 늦어지고 있어요 (지각 연락의 기본)',
+    sentences: [
+      Sentence("Jun's alarm didn't [go off|(알람이) 울리다] this morning.", '오늘 아침 준의 알람이 울리지 않았다.'),
+      Sentence('He woke up at 8:40, and his meeting started at nine.', '그는 8시 40분에 일어났는데, 회의는 9시였다.'),
+      Sentence('He [grabbed|급히 챙겼다] his bag and ran to the bus stop.', '그는 가방을 챙겨 버스 정류장으로 뛰었다.'),
+      Sentence('Of course, the bus [had just left|막 떠난 뒤였다 (과거완료)].', '당연하게도, 버스는 막 떠난 뒤였다.'),
+      Sentence('He [texted|문자를 보냈다] his manager: "Sorry, I\'m [running late|늦어지고 있다]. [I\'ll be there in|~ 후에 도착할게요] twenty minutes."', '그는 팀장에게 문자를 보냈다. "죄송해요, 좀 늦어요. 20분 안에 도착할게요."'),
+      Sentence('His manager replied, "[No worries|괜찮아요, 걱정 마세요]. [Take your time|천천히 하세요]."', '팀장이 답했다. "괜찮아요. 천천히 와요."'),
+      Sentence('Jun finally [relaxed|긴장을 풀었다].', '준은 그제야 마음을 놓았다.'),
+      Sentence("Tonight, he's [setting two alarms|알람을 두 개 맞추다].", '오늘 밤 그는 알람을 두 개 맞춰둘 생각이다.'),
+    ],
+    quiz: Quiz('팀장의 반응은 어땠나요?', ['화를 냈다', '회의를 취소했다', '괜찮다며 천천히 오라고 했다'], 2),
+  ),
+  Story(
+    id: 'package',
+    level: 3,
+    levelName: '중급',
+    title: 'The Wrong Package',
+    titleKo: '잘못 온 택배',
+    keyExpression: 'I think this was delivered to the wrong place.',
+    keyExpressionKo: '이거 잘못 배달된 것 같아요',
+    sentences: [
+      Sentence('When Sora got home, there was a large box [in front of|~ 앞에] her door.', '소라가 집에 와 보니 문 앞에 큰 상자가 있었다.'),
+      Sentence("She didn't [remember ordering|주문한 기억이 있다 (remember + -ing: 과거 일을 기억)] anything that big.", '그렇게 큰 걸 주문한 기억은 없었다.'),
+      Sentence('Looking at the label, she [realized|깨달았다] it was [addressed to|~ 앞으로 보내진] 302, not 203.', '라벨을 보니 203호가 아니라 302호 앞으로 온 것이었다.'),
+      Sentence("She carried it upstairs and [knocked on|~을 두드렸다] her neighbor's door.", '그녀는 상자를 들고 위층으로 올라가 이웃집 문을 두드렸다.'),
+      Sentence('An older man opened it and [looked surprised|놀란 표정이었다].', '나이 지긋한 남자가 문을 열고 놀란 표정을 지었다.'),
+      Sentence('"I think this was [delivered to the wrong place|잘못 배달된]," she said.', '"이거 잘못 배달된 것 같아요." 그녀가 말했다.'),
+      Sentence('"Oh, thank you! [I\'ve been waiting for|계속 기다려 왔다 (현재완료진행)] this all week."', '"아, 고마워요! 일주일 내내 이걸 기다렸어요."'),
+      Sentence('The next day, she found a bag of [tangerines|귤] [hanging on|~에 걸려 있는] her door with a note: "Thanks, neighbor!"', '다음 날, 문에 귤 한 봉지가 쪽지와 함께 걸려 있었다. "고마워요, 이웃님!"'),
+    ],
+    quiz: Quiz('상자는 원래 누구 것이었나요?', ['소라', '302호 이웃', '택배 기사'], 1),
+  ),
+  Story(
+    id: 'no',
+    level: 4,
+    levelName: '중상급',
+    title: 'Learning to Say No',
+    titleKo: '거절하는 법 배우기',
+    keyExpression: "I'd love to, but I'm swamped this week.",
+    keyExpressionKo: '그러고 싶은데, 이번 주는 일이 너무 많아요',
+    sentences: [
+      Sentence('For years, Hyun said yes to every [request|요청, 부탁] at work, even when his schedule was already [packed|꽉 찬].', '몇 년 동안 현은 일정이 이미 꽉 찼을 때도 회사의 모든 부탁을 받아들였다.'),
+      Sentence('He thought [turning people down|사람들의 부탁을 거절하는 것] would make him look lazy.', '거절하면 게을러 보일 거라고 생각했다.'),
+      Sentence('But last month, he [missed an important deadline|중요한 마감을 놓쳤다] because he had [taken on|(일을) 떠맡다] too much.', '하지만 지난달, 일을 너무 많이 떠맡은 탓에 중요한 마감을 놓쳤다.'),
+      Sentence('His manager [pulled him aside|그를 따로 불렀다] and said, "You don\'t have to do everything yourself."', '팀장이 그를 따로 불러 말했다. "모든 걸 혼자 할 필요는 없어요."'),
+      Sentence('Now, when someone asks for help, he checks his [priorities|우선순위] first.', '이제 누가 도움을 청하면, 그는 먼저 우선순위를 확인한다.'),
+      Sentence('If he can\'t help, he says, "[I\'d love to, but|그러고 싶지만 (정중한 거절)] I\'m [swamped|일에 파묻힌, 몹시 바쁜] this week. Could we look at it next Monday?"', '도울 수 없으면 이렇게 말한다. "그러고 싶은데, 이번 주는 일이 너무 많아요. 다음 주 월요일에 봐도 될까요?"'),
+      Sentence('[To his surprise|놀랍게도], nobody seems to [mind|신경 쓰다, 꺼리다].', '놀랍게도, 아무도 개의치 않는 것 같다.'),
+      Sentence('[In fact|오히려, 사실은], his coworkers now trust his yes even more.', '오히려 동료들은 이제 그의 "네"를 더 믿는다.'),
+    ],
+    quiz: Quiz('현은 요즘 어떻게 거절하나요?', ['사정을 말하고 다른 시간을 제안한다', '그냥 "안 돼요"라고 한다', '팀장에게 대신 말해달라고 한다'], 0),
+  ),
+];
+
+/// 데모 곡. 실제 팝송 가사는 저작권 때문에 앱에 넣지 않고, 직접 지은 가사를 쓴다.
+Song demoSong() => Song(
+      id: 'demo',
+      title: 'Paper Boats (데모용 창작곡)',
+      end: 32,
+      synced: true,
+      lines: [
+        LyricLine(t: 0, en: 'I [fold|접다] a paper boat tonight', ko: '오늘 밤 나는 종이배를 접어'),
+        LyricLine(t: 4, en: 'And [send it down|(물길) 따라 떠내려 보내다] the river light', ko: '강물 빛을 따라 띄워 보내'),
+        LyricLine(t: 8, en: 'It [carries|싣고 가다] every word I keep', ko: '내가 간직한 모든 말을 싣고'),
+        LyricLine(t: 12, en: 'The ones I never say, [too deep|너무 깊은]', ko: '너무 깊어 한 번도 못 한 말들을'),
+        LyricLine(t: 16, en: '[Float away|떠내려가다], float away', ko: '떠나가, 떠나가'),
+        LyricLine(t: 19.5, en: "Carry what I couldn't say", ko: '내가 못 한 말을 싣고 가'),
+        LyricLine(t: 23, en: 'If the morning [finds you there|거기 있는 너를 발견하다]', ko: '아침이 거기서 너를 찾으면'),
+        LyricLine(t: 27, en: "Know I'm thinking of you everywhere", ko: '어디서든 널 생각한다는 걸 알아줘'),
+      ],
+    );
