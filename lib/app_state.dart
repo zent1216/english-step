@@ -63,6 +63,14 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 삭제를 되돌릴 때. 복습 진도(box, dueAt)를 그대로 살린다.
+  void restoreWord(VocabItem item) {
+    if (hasWord(item.word)) return;
+    vocab.insert(0, item);
+    _saveVocab();
+    notifyListeners();
+  }
+
   List<VocabItem> dueWords() {
     final now = DateTime.now();
     return vocab.where((v) => v.isDue(now)).toList()

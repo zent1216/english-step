@@ -79,9 +79,13 @@
 | `lib/models.dart` | 완료 | Story/Sentence/Quiz/Song/LyricLine/VocabItem, `parseMarked`(학습 포인트 파싱), `plainText`, `parseYoutubeId`, `parseLyrics` |
 | `lib/content.dart` | 완료 | 이야기 4편(coffee/late/package/no), `demoSong()` |
 | `lib/app_state.dart` | 완료 | `AppState` 싱글톤(ChangeNotifier): 단어장, 내 노래, 완료한 이야기, 음성 속도를 SharedPreferences에 저장. `Speaker`(flutter_tts 래퍼) |
-| `lib/main.dart` | **미작성** | 아직 Flutter 기본 템플릿. 앱 시작 시 `AppState.instance.load()`, 테마, 하단 탭 |
-| 화면들 | **미작성** | story_list / story_reader / song_list / song_practice / song_editor / vocab 화면, 학습 포인트 텍스트 위젯(RichText + 탭 → 바텀시트) |
-| `test/` | **미작성** | models 파서 단위 테스트 |
+| `lib/main.dart` | 완료 | 앱 시작 시 `AppState.instance.load()`, 라이트/다크 테마, 하단 탭 3개(단어장 탭에 오늘 복습 개수 배지) |
+| `lib/theme.dart` | 완료 | 색(청회색/잉크 블루/형광펜 노랑), `englishStyle`(기기 기본 세리프), `markerColor`, `currentLineColor` |
+| `lib/widgets/marked_text.dart` | 완료 | `MarkedText`(형광펜 + 탭 → 뜻 바텀시트), `showGlossSheet`, `showSpeechRateSheet`(0.6~1.2배) |
+| `lib/screens/story_*` | 완료 | 목록(레벨/문장 수/핵심 표현/완료), 읽기(번호 탭 → 해석, 해석 모두 보기, 문장별/전체 듣기, 퀴즈 → 핵심 표현 카드) |
+| `lib/screens/song_*` | 완료 | 목록(데모 + 내 노래, 수정/삭제), 추가·수정(소절 수가 같으면 타이밍 유지), 연습(유튜브/가상 시계, 속도, 한 줄 반복, 이전/다음 줄, 4단계, 해석, 타이밍 맞추기, 임베드 차단 시 "가사만 보기") |
+| `lib/screens/vocab_screen.dart` | 완료 | 오늘 복습 개수, 복습 카드(헷갈린 표현은 이번 복습 끝에 한 번 더), 전체 목록(듣기/삭제 + 되돌리기) |
+| `test/` | 완료 | models 파서·JSON·콘텐츠 형식 단위 테스트 + 위젯 테스트(퀴즈 완료, 단어장 담기, 데모 곡 빈칸/재생) |
 
 상태 관리는 별도 패키지 없이 `AppState.instance`와 `ListenableBuilder`로 처리한다.
 
@@ -89,7 +93,8 @@
 - `youtube_player_iframe: 6.0.2` (Flutter 3.38 이상 필요)
 - `flutter_tts: 4.2.5` — **Android/iOS는 0.5가 보통 속도**다. 그래서 `Speaker.speak`에서 사용자 속도에 0.5를 곱한다(웹은 그대로).
 - `shared_preferences: 2.5.5`
-- 클라우드 환경에서 만들 때 Flutter 3.47.6 / Dart 3.13.5를 썼다.
+- 클라우드 환경에서 만들 때 Flutter 3.47.6 / Dart 3.13.5를 썼다. 집 PC는 Flutter 3.41.4 / Dart 3.11이라
+  pubspec의 SDK 조건을 `^3.11.0`으로 낮췄다(새 버전 전용 문법은 안 씀).
 
 ## 빌드 / 실행 (PC에서)
 - 클라우드 환경은 Android SDK 다운로드 서버(dl.google.com)가 막혀 있어서 APK를 만들 수 없다. **PC에서 빌드한다.**
@@ -98,12 +103,10 @@
 - 오버레이를 쓰지 않으니 leakcall 같은 삼성 사이드로드 오버레이 차단 문제는 없다. 그래도 Play 배포가 필요하면 leakcall의 내부 테스트 절차(루트 CLAUDE.md)를 참고한다.
 - 유튜브 재생에는 인터넷 권한(`android.permission.INTERNET`)이 필요하다. 릴리스 빌드에서는 AndroidManifest에 명시해야 한다.
 
+- 웹 미리보기: 저장소 루트 `.claude/launch.json`의 `english_step-web`(flutter run -d web-server, 포트 8765).
+  웹(CanvasKit)에는 'serif' 글꼴이 없어 영어 본문이 고딕으로 보인다. 안드로이드에서는 Noto Serif로 나온다.
+
 ## 다음 할 일 (순서대로)
-1. `main.dart`: 앱 시작 시 데이터 불러오기, 테마(라이트/다크), 하단 탭 3개
-2. 학습 포인트 텍스트 위젯과 뜻 바텀시트
-3. 이야기 목록 → 읽기 화면(듣기, 해석, 퀴즈)
-4. 팝송 목록 → 연습 화면(유튜브, 속도, 반복, 4단계) → 노래 추가와 타이밍 맞추기
-5. 단어장 복습 화면
-6. models 단위 테스트, `flutter analyze` 통과
-7. 폰에 설치해서 테스트 → 피드백 반영
-8. (선택) 별도 저장소로 분리, Play 내부 테스트로 배포
+1. ~~main.dart, 학습 포인트 위젯, 이야기/팝송/단어장 화면, 테스트~~ (2026-10-08 완료, analyze 0건, 테스트 13개 통과)
+2. 폰에 설치해서 테스트 → 피드백 반영 (특히 유튜브 재생, TTS, 타이밍 맞추기는 실기기 확인 필요)
+3. (선택) 별도 저장소로 분리, Play 내부 테스트로 배포
