@@ -4,6 +4,7 @@ import '../app_state.dart';
 import '../models.dart';
 import '../theme.dart';
 import '../widgets/marked_text.dart';
+import '../widgets/speak_check_sheet.dart';
 
 /// 이야기 읽기: 문장별 듣기/해석, 전체 듣기, 끝에 이해 확인 퀴즈.
 class StoryReaderScreen extends StatefulWidget {
@@ -154,6 +155,7 @@ class _StoryReaderScreenState extends State<StoryReaderScreen> {
               ),
             ),
           ),
+          SpeakCheckButton(s.en, ko: s.ko),
           IconButton(
             tooltip: '이 문장 듣기',
             visualDensity: VisualDensity.compact,
@@ -229,7 +231,9 @@ class _StoryReaderScreenState extends State<StoryReaderScreen> {
             ),
             Text(story.keyExpressionKo, style: TextStyle(color: scheme.onPrimaryContainer)),
             const SizedBox(height: 12),
-            Row(
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
               children: [
                 FilledButton.tonalIcon(
                   icon: const Icon(Icons.volume_up),
@@ -237,7 +241,12 @@ class _StoryReaderScreenState extends State<StoryReaderScreen> {
                   onPressed: () =>
                       Speaker.instance.speak(story.keyExpression, rate: state.speechRate),
                 ),
-                const SizedBox(width: 8),
+                FilledButton.tonalIcon(
+                  icon: const Icon(Icons.mic),
+                  label: const Text('따라 말하기'),
+                  onPressed: () => showSpeakCheckSheet(context, story.keyExpression,
+                      ko: story.keyExpressionKo),
+                ),
                 ListenableBuilder(
                   listenable: state,
                   builder: (context, _) => state.hasWord(story.keyExpression)

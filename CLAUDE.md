@@ -136,3 +136,14 @@
 - LRCLIB 가사는 영어만 있다. 연습 화면의 "해석 자동 채우기" 칩 → **구글 ML Kit 기기 내 번역**(`google_mlkit_translation: 0.14.0`, `lib/translate.dart`).
   무료·오프라인(처음 한 번 영어/한국어 모델 약 60MB 다운로드). 서버형 AI 번역은 호출 비용 때문에 쓰지 않는다(운영비 0원 원칙).
 - 직역 위주라 가사 비유는 어색할 수 있음 → 노래 수정 화면에서 직접 고칠 수 있다. 안드로이드/iOS에서만 동작(웹 미지원).
+
+## 따라 말하기 / 발음 체크 (2026-10-08 추가)
+- 기기 내장 음성 인식(`speech_to_text: 7.4.0`, Flutter 3.41 호환 마지막 정식판)으로 사용자가 말한 문장을 받아,
+  원문과 **단어 단위**로 비교(LCS, 대소문자·문장부호 무시)해 맞은 단어 초록 / 못 알아들은 단어 빨강 + 일치율(%)을 보여준다.
+  AI 서버·비용 없음. 발음기호 단위 채점(ELSA식)이 아니라 "원어민(음성 인식)이 알아듣는가"를 본다.
+- 코드: `lib/pronunciation.dart`(비교 로직, `test/pronunciation_test.dart`), `lib/widgets/speak_check_sheet.dart`
+  (마이크 버튼 `SpeakCheckButton` + 바텀시트). 붙인 곳: 이야기 문장별·핵심 표현, Lv.0 문장 카드.
+- 팝송 가사 줄에는 아직 안 붙였다(음악 소리와 겹쳐 인식이 나쁨. 붙이려면 영상 일시정지 후 시트 열기).
+- 권한: AndroidManifest에 `RECORD_AUDIO` + `<queries>`의 `android.speech.RecognitionService`. 권한 요청은 플러그인이 첫 사용 때 한다.
+- 나중에: 내 목소리 녹음해서 원어민 음성과 번갈아 듣기(음성 인식과 동시에 마이크를 못 써서 별도 구현 필요).
+- 클라우드 세션에서도 Flutter를 3.41.4로 맞춰 작업했다(pubspec.lock이 PC/Actions와 어긋나지 않게).

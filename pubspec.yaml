@@ -40,6 +40,7 @@ dependencies:
   http: 1.6.0
   youtube_explode_dart: 3.1.0
   google_mlkit_translation: 0.14.0
+  speech_to_text: 7.4.0
 
 dev_dependencies:
   flutter_test:

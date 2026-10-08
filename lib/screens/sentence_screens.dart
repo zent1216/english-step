@@ -4,6 +4,7 @@ import '../app_state.dart';
 import '../sentences.dart';
 import '../theme.dart';
 import '../widgets/marked_text.dart';
+import '../widgets/speak_check_sheet.dart';
 
 /// Lv.0 첫걸음 문장: 20세트 목록.
 class SentenceSetListScreen extends StatelessWidget {
@@ -227,6 +228,7 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
                       icon: Icon(Icons.volume_up_outlined, color: scheme.primary),
                       onPressed: () => _speak(s.en),
                     ),
+                  if (!_speakMode || open) SpeakCheckButton(s.en, ko: s.ko),
                   ListenableBuilder(
                     listenable: AppState.instance,
                     builder: (context, _) {
