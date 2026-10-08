@@ -30,6 +30,17 @@ android {
         versionName = flutter.versionName
     }
 
+    // 테스트용 고정 서명 키. PC 빌드와 GitHub Actions 빌드가 같은 키로 서명돼야
+    // 폰에서 삭제 없이 업데이트 설치가 된다. (Play 배포 시에는 별도 업로드 키 필요)
+    signingConfigs {
+        getByName("debug") {
+            storeFile = file("ci-debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
         release {
             // TODO: Add your own signing config for the release build.

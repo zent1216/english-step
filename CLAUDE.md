@@ -99,7 +99,13 @@
   pubspec의 SDK 조건을 `^3.11.0`으로 낮췄다(새 버전 전용 문법은 안 씀).
 
 ## 빌드 / 실행 (PC에서)
-- 클라우드 환경은 Android SDK 다운로드 서버(dl.google.com)가 막혀 있어서 APK를 만들 수 없다. **PC에서 빌드한다.**
+- **GitHub Actions 자동 빌드**(`.github/workflows/english_step_apk.yml`): `english-study` 브랜치에
+  `english_step/` 변경을 푸시하면 analyze → test → release·debug APK를 빌드한다. GitHub 저장소 →
+  Actions → 해당 실행 → Artifacts에서 zip을 받아 `app-release.apk`를 설치한다. 빌드 번호 = 실행 번호(자동 증가).
+- **서명 키 고정**: `android/app/ci-debug.keystore`(비밀번호 android, 테스트 전용)를 PC 빌드와 Actions 빌드가 같이 쓴다.
+  그래서 어디서 빌드하든 폰에서 삭제 없이 업데이트된다. 이 키를 쓰기 전에 PC 기본 디버그 키로 설치한 앱은 한 번 삭제 후 설치해야 한다.
+  Play 배포 시에는 별도 업로드 키를 만들어야 한다(이 키는 저장소에 커밋돼 있으므로 배포용으로 쓰지 말 것).
+- 클라우드 환경은 Android SDK 다운로드 서버(dl.google.com)가 막혀 있어서 APK를 만들 수 없다. **PC 또는 Actions에서 빌드한다.**
 - `cd english_step` → `flutter pub get` → `flutter run`, 또는 `flutter build apk --debug` → `adb install -r build\app\outputs\flutter-apk\app-debug.apk`
 - 패키지 ID는 `com.facilitymanager.english_step`
 - 오버레이를 쓰지 않으니 leakcall 같은 삼성 사이드로드 오버레이 차단 문제는 없다. 그래도 Play 배포가 필요하면 leakcall의 내부 테스트 절차(루트 CLAUDE.md)를 참고한다.
