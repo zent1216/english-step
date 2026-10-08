@@ -100,10 +100,10 @@
 
 ## 빌드 / 실행 (PC에서)
 - **GitHub Actions 자동 빌드**(`.github/workflows/english_step_apk.yml`): `english-study` 브랜치에
-  `english_step/` 변경을 푸시하면 analyze → test → release·debug APK를 빌드한다. 빌드 번호 = 실행 번호(자동 증가).
+  `english_step/` 변경을 푸시하면 analyze → test → release APK를 빌드한다. 빌드 번호 = 실행 번호(자동 증가).
   - **폰에서 바로 받는 고정 주소**(항상 최신): https://github.com/zent1216/leakcall/releases/download/english-step-latest/english_step.apk
     (빌드마다 `english-step-latest` 릴리스를 지우고 다시 만든다. 저장소가 비공개면 GitHub 로그인 필요)
-  - 디버그 APK까지 필요하면 Actions → 해당 실행 → Artifacts(30일 보관).
+  - 같은 APK가 Actions → 해당 실행 → Artifacts에도 있다(30일 보관). 디스크가 빠듯해 debug APK는 빌드하지 않는다.
 - **서명 키 고정**: `android/app/ci-debug.keystore`(비밀번호 android, 테스트 전용)를 PC 빌드와 Actions 빌드가 같이 쓴다.
   그래서 어디서 빌드하든 폰에서 삭제 없이 업데이트된다. 이 키를 쓰기 전에 PC 기본 디버그 키로 설치한 앱은 한 번 삭제 후 설치해야 한다.
   Play 배포 시에는 별도 업로드 키를 만들어야 한다(이 키는 저장소에 커밋돼 있으므로 배포용으로 쓰지 말 것).
