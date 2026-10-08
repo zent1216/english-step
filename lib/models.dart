@@ -68,7 +68,7 @@ class LyricLine {
   LyricLine({required this.t, required this.en, this.ko = ''});
   double t; // 이 소절이 시작되는 시각(초)
   final String en;
-  final String ko;
+  String ko; // 해석. 비어 있으면 기기 번역으로 나중에 채울 수 있다
 
   Map<String, dynamic> toJson() => {'t': t, 'en': en, 'ko': ko};
   factory LyricLine.fromJson(Map<String, dynamic> j) => LyricLine(

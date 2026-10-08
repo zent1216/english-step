@@ -8,6 +8,7 @@ import '../app_state.dart';
 import '../models.dart';
 import '../song_search.dart';
 import '../theme.dart';
+import '../translate.dart';
 import '../widgets/marked_text.dart';
 
 const _rates = [0.5, 0.75, 0.9, 1.0, 1.25];
@@ -35,6 +36,7 @@ class _SongPracticeScreenState extends State<SongPracticeScreen> {
   int _stage = 0; // 연습 단계 0~3
   bool _showKo = true;
   final _revealed = <int>{}; // 빈칸/첫 글자/숨기기 단계에서 정답을 펼친 줄
+  int _trDone = 0, _trTotal = 0; // 기기 번역 진행 상황(_trTotal > 0이면 번역 중)
 
   // 영상이 없을 때 쓰는 가상 시계: 마지막으로 재생을 시작한 시각과 그때의 위치.
   double _vBase = 0;
@@ -212,6 +214,60 @@ class _SongPracticeScreenState extends State<SongPracticeScreen> {
     });
     _initVideo();
     setState(() {});
+  }
+
+  bool get _missingKo => lines.any((l) => l.ko.trim().isEmpty);
+
+  /// 해석이 빈 줄을 기기 번역(ML Kit)으로 채운다. 처음 한 번은 번역 모델을 받는다.
+  Future<void> _fillTranslation() async {
+    if (!await translationModelsReady()) {
+      if (!mounted) return;
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('해석 자동 채우기'),
+          content: const Text(
+            '휴대폰 안에서 무료로 번역해요. 처음 한 번만 번역 모델(약 60MB)을 내려받아요. '
+            '와이파이에서 받는 걸 권장해요.\n\n'
+            '기계 번역이라 가사의 비유는 어색할 수 있어요. 노래 수정 화면에서 직접 고칠 수 있어요.',
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('취소')),
+            FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('받고 번역')),
+          ],
+        ),
+      );
+      if (ok != true) return;
+    }
+    final targets = [
+      for (var i = 0; i < lines.length; i++)
+        if (lines[i].ko.trim().isEmpty) i,
+    ];
+    setState(() {
+      _trDone = 0;
+      _trTotal = targets.length;
+    });
+    try {
+      final ko = await translateToKorean(
+        [for (final i in targets) plainText(lines[i].en)],
+        onProgress: (done, _) {
+          if (mounted) setState(() => _trDone = done);
+        },
+      );
+      for (var k = 0; k < targets.length; k++) {
+        lines[targets[k]].ko = ko[k];
+      }
+      AppState.instance.updateSong(song);
+      if (mounted) setState(() => _showKo = true);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('번역하지 못했어요. 처음에는 인터넷 연결이 필요해요.'),
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _trTotal = 0);
+    }
   }
 
   /// 모든 소절의 시각을 [d]초만큼 옮긴다(영상 앞부분 길이가 달라 가사가 밀릴 때).
@@ -530,6 +586,24 @@ class _SongPracticeScreenState extends State<SongPracticeScreen> {
             selected: _showKo,
             onSelected: (v) => setState(() => _showKo = v),
           ),
+          if (_trTotal > 0) ...[
+            const SizedBox(width: 8),
+            Chip(
+              avatar: const SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              label: Text('번역 중 $_trDone/$_trTotal'),
+            ),
+          ] else if (_missingKo && canTranslateOnDevice && !song.isDemo) ...[
+            const SizedBox(width: 8),
+            ActionChip(
+              avatar: const Icon(Icons.translate, size: 18),
+              label: const Text('해석 자동 채우기'),
+              onPressed: _fillTranslation,
+            ),
+          ],
         ],
       ),
     );

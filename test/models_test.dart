@@ -1,8 +1,23 @@
 import 'package:english_step/content.dart';
 import 'package:english_step/models.dart';
+import 'package:english_step/sentences.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  test('Lv.0 문장 데이터: 200개, 10개씩 20세트, 빈 값 없음', () async {
+    final all = await loadLv0Sentences();
+    expect(all, hasLength(200));
+    expect(chunkSets(all), hasLength(20));
+    for (final s in all) {
+      expect(s.en.trim(), isNotEmpty);
+      expect(s.ko.trim(), isNotEmpty);
+      expect(s.src, startsWith('#'));
+    }
+    expect(all.map((s) => s.en.toLowerCase()).toSet(), hasLength(200), reason: '중복 문장');
+  });
+
   group('parseMarked', () {
     test('학습 포인트와 일반 텍스트를 나눈다', () {
       final segs = parseMarked('Mina [walks into|~에 걸어 들어가다] a shop.');

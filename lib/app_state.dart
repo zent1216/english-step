@@ -20,6 +20,7 @@ class AppState extends ChangeNotifier {
   List<VocabItem> vocab = [];
   List<Song> songs = [];
   Set<String> doneStories = {};
+  Set<String> doneSets = {}; // Lv.0 첫걸음 문장 세트 (lv0-0 ~ lv0-19)
   double speechRate = 0.9;
 
   Future<void> load() async {
@@ -27,6 +28,7 @@ class AppState extends ChangeNotifier {
     vocab = _decodeList(p.getString('vocab'), VocabItem.fromJson);
     songs = _decodeList(p.getString('songs'), Song.fromJson);
     doneStories = (p.getStringList('doneStories') ?? []).toSet();
+    doneSets = (p.getStringList('doneSets') ?? []).toSet();
     speechRate = p.getDouble('speechRate') ?? 0.9;
     notifyListeners();
   }
@@ -91,6 +93,14 @@ class AppState extends ChangeNotifier {
     }
     _saveVocab();
     notifyListeners();
+  }
+
+  // ---- Lv.0 첫걸음 문장 ----
+  void markSetDone(String id) {
+    if (doneSets.add(id)) {
+      _prefs?.setStringList('doneSets', doneSets.toList());
+      notifyListeners();
+    }
   }
 
   // ---- 이야기 ----

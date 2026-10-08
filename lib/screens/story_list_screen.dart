@@ -5,6 +5,7 @@ import '../content.dart';
 import '../models.dart';
 import '../theme.dart';
 import '../widgets/marked_text.dart';
+import 'sentence_screens.dart';
 import 'story_reader_screen.dart';
 
 class StoryListScreen extends StatelessWidget {
@@ -28,7 +29,7 @@ class StoryListScreen extends StatelessWidget {
         listenable: state,
         builder: (context, _) => ListView.separated(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-          itemCount: stories.length + 1,
+          itemCount: stories.length + 2,
           separatorBuilder: (_, _) => const SizedBox(height: 10),
           itemBuilder: (context, i) {
             if (i == 0) {
@@ -41,9 +42,62 @@ class StoryListScreen extends StatelessWidget {
                 ),
               );
             }
-            final s = stories[i - 1];
+            if (i == 1) return _Lv0Card(done: state.doneSets.length);
+            final s = stories[i - 2];
             return _StoryCard(story: s, done: state.doneStories.contains(s.id));
           },
+        ),
+      ),
+    );
+  }
+}
+
+/// Lv.0 첫걸음 문장(짧은 문장 200개, 10개씩 20세트)으로 들어가는 카드.
+class _Lv0Card extends StatelessWidget {
+  const _Lv0Card({required this.done});
+  final int done;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    return Card(
+      color: scheme.primaryContainer,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const SentenceSetListScreen()),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Lv.0 첫걸음 문장',
+                        style: text.titleMedium?.copyWith(color: scheme.onPrimaryContainer)),
+                    const SizedBox(height: 4),
+                    Text(
+                      '"How are you?" 같은 짧은 문장 200개 · 10개씩 20세트',
+                      style: TextStyle(color: scheme.onPrimaryContainer),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                '$done/20',
+                style: TextStyle(
+                  fontFamily: monoFont,
+                  fontSize: 18,
+                  color: scheme.onPrimaryContainer,
+                ),
+              ),
+              Icon(Icons.chevron_right, color: scheme.onPrimaryContainer),
+            ],
+          ),
         ),
       ),
     );

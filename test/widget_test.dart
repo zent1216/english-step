@@ -65,6 +65,27 @@ void main() {
     await tester.pumpAndSettle();
   });
 
+  testWidgets('Lv.0 첫걸음: 세트 열기 → 해석 보기 → 완료', (tester) async {
+    await tester.pumpWidget(const EnglishStepApp());
+    await tester.tap(find.text('Lv.0 첫걸음 문장'));
+    await tester.pumpAndSettle();
+    expect(find.text('20'), findsOneWidget); // 20세트
+
+    await tester.tap(find.text('1'));
+    await tester.pumpAndSettle();
+    expect(find.text('Lv.0 · 1세트'), findsOneWidget);
+    await tester.tap(find.text('눌러서 해석 보기').first);
+    await tester.pumpAndSettle();
+    expect(find.text('이러지 마세요.'), findsOneWidget); // 첫 문장 "Don't do this."의 해석
+
+    final next = find.text('완료하고 다음 세트');
+    await tester.scrollUntilVisible(next, 300);
+    await tester.tap(next);
+    await tester.pumpAndSettle();
+    expect(AppState.instance.doneSets, contains('lv0-0'));
+    expect(find.text('Lv.0 · 2세트'), findsOneWidget);
+  });
+
   testWidgets('탭 이동과 빈 단어장 안내', (tester) async {
     await tester.pumpWidget(const EnglishStepApp());
     await tester.tap(find.byIcon(Icons.style_outlined));
