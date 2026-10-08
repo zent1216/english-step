@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../app_state.dart';
 import '../models.dart';
 import 'song_editor_screen.dart';
+import 'song_search_screen.dart';
 import 'song_practice_screen.dart';
 
 class SongListScreen extends StatelessWidget {
@@ -15,11 +16,11 @@ class SongListScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('팝송 연습')),
       floatingActionButton: FloatingActionButton.extended(
-        icon: const Icon(Icons.add),
-        label: const Text('내 노래 추가'),
+        icon: const Icon(Icons.search),
+        label: const Text('노래 찾기'),
         onPressed: () => Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const SongEditorScreen()),
+          MaterialPageRoute(builder: (_) => const SongSearchScreen()),
         ),
       ),
       body: ListenableBuilder(
@@ -33,8 +34,8 @@ class SongListScreen extends StatelessWidget {
             itemBuilder: (context, i) {
               if (i == 0) {
                 return Text(
-                  '좋아하는 노래의 유튜브 주소와 가사를 붙여넣고 따라 불러보세요. '
-                  '가사는 저작권 때문에 앱에 들어있지 않아요.',
+                  '노래 제목을 검색하면 가사와 유튜브 영상을 자동으로 찾아 채워줘요. '
+                  '가사는 앱에 들어있지 않고, 검색할 때 공개 가사 데이터베이스(LRCLIB)에서 받아와요.',
                   style: TextStyle(color: scheme.onSurfaceVariant),
                 );
               }

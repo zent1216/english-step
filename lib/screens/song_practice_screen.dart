@@ -6,6 +6,7 @@ import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 
 import '../app_state.dart';
 import '../models.dart';
+import '../song_search.dart';
 import '../theme.dart';
 import '../widgets/marked_text.dart';
 
@@ -52,24 +53,27 @@ class _SongPracticeScreenState extends State<SongPracticeScreen> {
   void initState() {
     super.initState();
     _keys = List.generate(lines.length, (_) => GlobalKey());
-    if (song.youtubeId.isNotEmpty) {
-      _yt = YoutubePlayerController.fromVideoId(
-        videoId: song.youtubeId,
-        params: const YoutubePlayerParams(
-          showFullscreenButton: false,
-          strictRelatedVideos: true,
-          enableCaption: false,
-        ),
-      );
-      _ytSub = _yt!.stream.listen((v) {
-        if (!mounted) return;
-        setState(() {
-          _playing = v.playerState == PlayerState.playing;
-          if (v.error != YoutubeError.none) _error = _errorText(v.error);
-        });
-      });
-    }
+    _initVideo();
     _poll = Timer.periodic(const Duration(milliseconds: 150), (_) => _tick());
+  }
+
+  void _initVideo() {
+    if (song.youtubeId.isEmpty) return;
+    _yt = YoutubePlayerController.fromVideoId(
+      videoId: song.youtubeId,
+      params: const YoutubePlayerParams(
+        showFullscreenButton: false,
+        strictRelatedVideos: true,
+        enableCaption: false,
+      ),
+    );
+    _ytSub = _yt!.stream.listen((v) {
+      if (!mounted) return;
+      setState(() {
+        _playing = v.playerState == PlayerState.playing;
+        if (v.error != YoutubeError.none) _error = _errorText(v.error);
+      });
+    });
   }
 
   @override
@@ -184,6 +188,84 @@ class _SongPracticeScreenState extends State<SongPracticeScreen> {
     });
   }
 
+  /// 다른 유튜브 영상으로 바꾼다(재생이 막혔거나 가사와 안 맞을 때).
+  Future<void> _changeVideo() async {
+    final picked = await showModalBottomSheet<VideoResult>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (context) => _VideoPickerSheet(song: song),
+    );
+    if (picked == null || !mounted) return;
+    _ytSub?.cancel();
+    _yt?.close();
+    song.youtubeId = picked.id;
+    AppState.instance.updateSong(song);
+    setState(() {
+      _yt = null;
+      _error = null;
+      _playing = false;
+      _pos = 0;
+      _vBase = 0;
+      _vStart = null;
+      _lastScrolled = -1;
+    });
+    _initVideo();
+    setState(() {});
+  }
+
+  /// 모든 소절의 시각을 [d]초만큼 옮긴다(영상 앞부분 길이가 달라 가사가 밀릴 때).
+  void _shiftAll(double d) {
+    for (final l in lines) {
+      l.t = math.max(0, l.t + d);
+    }
+    AppState.instance.updateSong(song);
+    setState(() => _lastScrolled = -1);
+  }
+
+  Future<void> _showShiftSheet() {
+    var total = 0.0;
+    return showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setSheet) {
+          Widget btn(double d) => OutlinedButton(
+                onPressed: () {
+                  _shiftAll(d);
+                  setSheet(() => total += d);
+                },
+                child: Text('${d > 0 ? '+' : ''}$d초'),
+              );
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('싱크 조절', style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 4),
+                  const Text('가사가 노래보다 먼저 나오면 + (늦추기), 늦게 나오면 − (당기기)'),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [btn(-1), btn(-0.5), btn(0.5), btn(1)],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    '이번에 옮긴 시간: ${total > 0 ? '+' : ''}${total.toStringAsFixed(1)}초',
+                    style: const TextStyle(fontFamily: monoFont),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   int get _current {
     if (_syncTimes != null) return _syncTimes!.length - 1;
     var cur = -1;
@@ -274,17 +356,27 @@ class _SongPracticeScreenState extends State<SongPracticeScreen> {
         title: Text(song.title, overflow: TextOverflow.ellipsis),
         actions: [
           if (!song.isDemo && _syncTimes == null)
-            TextButton.icon(
-              icon: const Icon(Icons.touch_app_outlined),
-              label: const Text('타이밍 맞추기'),
-              onPressed: _startSync,
+            PopupMenuButton<String>(
+              onSelected: (v) => switch (v) {
+                'shift' => _showShiftSheet(),
+                'video' => _changeVideo(),
+                _ => _startSync(),
+              },
+              itemBuilder: (_) => const [
+                PopupMenuItem(value: 'shift', child: Text('싱크 조절 (가사 밀림)')),
+                PopupMenuItem(value: 'video', child: Text('다른 영상 찾기')),
+                PopupMenuItem(value: 'sync', child: Text('타이밍 직접 맞추기')),
+              ],
             ),
         ],
       ),
       bottomNavigationBar: _syncTimes == null ? null : _syncBar(),
       body: Column(
         children: [
-          if (_yt != null) YoutubePlayer(controller: _yt!) else _virtualClock(),
+          if (_yt != null)
+            YoutubePlayer(key: ValueKey(song.youtubeId), controller: _yt!)
+          else
+            _virtualClock(),
           if (_error != null) _errorBanner(),
           _controls(cur),
           _stageBar(),
@@ -343,7 +435,13 @@ class _SongPracticeScreenState extends State<SongPracticeScreen> {
           Expanded(
             child: Text(_error!, style: TextStyle(color: scheme.onErrorContainer)),
           ),
-          TextButton(onPressed: _dropVideo, child: const Text('가사만 보기')),
+          Column(
+            children: [
+              if (!song.isDemo)
+                TextButton(onPressed: _changeVideo, child: const Text('다른 영상 찾기')),
+              TextButton(onPressed: _dropVideo, child: const Text('가사만 보기')),
+            ],
+          ),
         ],
       ),
     );
@@ -555,6 +653,74 @@ class _SongPracticeScreenState extends State<SongPracticeScreen> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 연습 중에 다른 유튜브 영상을 고르는 시트. 노래 제목과 곡 길이로 다시 검색한다.
+class _VideoPickerSheet extends StatefulWidget {
+  const _VideoPickerSheet({required this.song});
+  final Song song;
+
+  @override
+  State<_VideoPickerSheet> createState() => _VideoPickerSheetState();
+}
+
+class _VideoPickerSheetState extends State<_VideoPickerSheet> {
+  late final Future<List<VideoResult>> _future =
+      searchVideos(widget.song.title, targetSeconds: widget.song.end);
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return SafeArea(
+      child: SizedBox(
+        height: MediaQuery.sizeOf(context).height * 0.7,
+        child: FutureBuilder<List<VideoResult>>(
+          future: _future,
+          builder: (context, snap) {
+            if (snap.connectionState != ConnectionState.done) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final list = (snap.data ?? const <VideoResult>[])
+                .where((v) => v.id != widget.song.youtubeId)
+                .toList();
+            if (snap.hasError || list.isEmpty) {
+              return Center(
+                child: Text(
+                  snap.hasError ? '영상 검색에 실패했어요. 인터넷 연결을 확인해 주세요.' : '다른 영상을 찾지 못했어요.',
+                  style: TextStyle(color: scheme.onSurfaceVariant),
+                ),
+              );
+            }
+            return ListView(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+                  child: Text('다른 영상 고르기', style: Theme.of(context).textTheme.titleMedium),
+                ),
+                for (final v in list.take(10))
+                  ListTile(
+                    leading: ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: Image.network(
+                        'https://i.ytimg.com/vi/${v.id}/mqdefault.jpg',
+                        width: 80,
+                        height: 45,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) =>
+                            Container(width: 80, height: 45, color: scheme.surfaceContainerHighest),
+                      ),
+                    ),
+                    title: Text(v.title, maxLines: 2, overflow: TextOverflow.ellipsis),
+                    subtitle: Text(v.author, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    onTap: () => Navigator.pop(context, v),
+                  ),
+              ],
+            );
+          },
         ),
       ),
     );
