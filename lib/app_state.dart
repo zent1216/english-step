@@ -22,6 +22,8 @@ class AppState extends ChangeNotifier {
   Set<String> doneStories = {};
   Set<String> doneSets = {}; // Lv.0 첫걸음 문장 세트 (lv0-0 ~ lv0-19)
   double speechRate = 0.9;
+  // 따라 말하기 문장별 최고 점수(0~100). 키는 [speakKey].
+  Map<String, int> speakScores = {};
 
   Future<void> load() async {
     final p = _prefs = await SharedPreferences.getInstance();
@@ -30,6 +32,14 @@ class AppState extends ChangeNotifier {
     doneStories = (p.getStringList('doneStories') ?? []).toSet();
     doneSets = (p.getStringList('doneSets') ?? []).toSet();
     speechRate = p.getDouble('speechRate') ?? 0.9;
+    try {
+      final raw = p.getString('speakScores');
+      speakScores = raw == null
+          ? {}
+          : (jsonDecode(raw) as Map).map((k, v) => MapEntry(k as String, (v as num).toInt()));
+    } catch (_) {
+      speakScores = {};
+    }
     notifyListeners();
   }
 
@@ -109,6 +119,22 @@ class AppState extends ChangeNotifier {
       _prefs?.setStringList('doneStories', doneStories.toList());
       notifyListeners();
     }
+  }
+
+  // ---- 따라 말하기 점수 ----
+  /// 같은 문장이면 어디서 말했든 같은 키(학습 포인트 표시·대소문자·문장부호 무시).
+  static String speakKey(String target) =>
+      plainText(target).toLowerCase().replaceAll(RegExp(r"[^a-z0-9 ]"), '').replaceAll(RegExp(r'\s+'), ' ').trim();
+
+  int? speakScore(String target) => speakScores[speakKey(target)];
+
+  /// 최고 점수만 남긴다.
+  void recordSpeakScore(String target, int score) {
+    final k = speakKey(target);
+    if (k.isEmpty || (speakScores[k] ?? -1) >= score) return;
+    speakScores[k] = score;
+    _prefs?.setString('speakScores', jsonEncode(speakScores));
+    notifyListeners();
   }
 
   void setSpeechRate(double r) {

@@ -13,6 +13,8 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:sherpa_onnx/sherpa_onnx.dart' as so;
 
+import 'audio_prep.dart';
+
 enum ModelState { checking, missing, downloading, extracting, ready, error }
 
 class MoonshineEngine extends ChangeNotifier {
@@ -119,14 +121,20 @@ class MoonshineEngine extends ChangeNotifier {
   /// 16kHz 모노 음성을 영어 문장으로. 짧은 문장은 폰에서 1초 안팎.
   String transcribe(Float32List samples) {
     final rec = _load();
-    final stream = rec.createStream();
-    try {
-      stream.acceptWaveform(samples: samples, sampleRate: sampleRate);
-      rec.decode(stream);
-      return rec.getResult(stream).text.trim();
-    } finally {
-      stream.free();
+    // 앞뒤 무음 자르기 + 긴 쉼 줄이기 + 8초 넘으면 나눠서 받아쓴다(audio_prep.dart).
+    final parts = <String>[];
+    for (final chunk in prepareForAsr(samples, rate: sampleRate)) {
+      final stream = rec.createStream();
+      try {
+        stream.acceptWaveform(samples: chunk, sampleRate: sampleRate);
+        rec.decode(stream);
+        final t = rec.getResult(stream).text.trim();
+        if (t.isNotEmpty) parts.add(t);
+      } finally {
+        stream.free();
+      }
     }
+    return parts.join(' ');
   }
 
   /// 내 목소리 다시 듣기용 WAV 저장.

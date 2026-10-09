@@ -29,17 +29,33 @@ class SpeakCheckButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return IconButton.filledTonal(
-      tooltip: '말하기(발음 체크)',
-      visualDensity: VisualDensity.compact,
-      style: IconButton.styleFrom(
-        backgroundColor: scheme.tertiaryContainer,
-        foregroundColor: scheme.onTertiaryContainer,
-      ),
-      icon: const Icon(Icons.mic, size: 20),
-      onPressed: () {
-        onBeforeOpen?.call();
-        showSpeakCheckSheet(context, target, ko: ko, quiz: quiz);
+    // 이 문장의 최고 점수: 100점이면 초록 체크, 점수가 있으면 작은 배지로 보여준다.
+    return ListenableBuilder(
+      listenable: AppState.instance,
+      builder: (context, _) {
+        final best = AppState.instance.speakScore(target);
+        final perfect = best == 100;
+        final good = AppColors.of(context).good;
+        final button = IconButton.filledTonal(
+          tooltip: best == null ? '말하기(발음 체크)' : '말하기 · 최고 $best점',
+          visualDensity: VisualDensity.compact,
+          style: IconButton.styleFrom(
+            backgroundColor: perfect ? good.withValues(alpha: 0.18) : scheme.tertiaryContainer,
+            foregroundColor: perfect ? good : scheme.onTertiaryContainer,
+          ),
+          icon: Icon(perfect ? Icons.check_circle_rounded : Icons.mic, size: 20),
+          onPressed: () {
+            onBeforeOpen?.call();
+            showSpeakCheckSheet(context, target, ko: ko, quiz: quiz);
+          },
+        );
+        if (best == null || perfect) return button;
+        return Badge(
+          label: Text('$best'),
+          backgroundColor: best >= 85 ? good : (best >= 65 ? _closeColor : scheme.error),
+          offset: const Offset(2, -2),
+          child: button,
+        );
       },
     );
   }
@@ -129,7 +145,8 @@ class _SpeakCheckSheetState extends State<_SpeakCheckSheet> {
   String _heard = '';
   SpeakResult? _result;
   String? _error;
-  int? _best;
+  int? _best; // 이 문장의 역대 최고 점수(저장된 값 포함)
+  int? _sessionBest; // 이번에 연 시트에서의 최고 점수(단어장 '말해서 답하기' 판정용)
   String? _takePath; // 내 목소리 다시 듣기
 
   @override
@@ -137,6 +154,7 @@ class _SpeakCheckSheetState extends State<_SpeakCheckSheet> {
     super.initState();
     _engine.addListener(_onEngine);
     _engine.init();
+    _best = AppState.instance.speakScore(widget.target);
     _recorder.onLevel = (v) {
       if (mounted && _listening) setState(() => _level = v);
     };
@@ -256,7 +274,7 @@ class _SpeakCheckSheetState extends State<_SpeakCheckSheet> {
         partialResults: true,
         cancelOnError: true,
         listenMode: ListenMode.dictation,
-        pauseFor: const Duration(seconds: 3),
+        pauseFor: const Duration(seconds: 4),
         listenFor: const Duration(seconds: 30),
       ),
     );
@@ -294,7 +312,11 @@ class _SpeakCheckSheetState extends State<_SpeakCheckSheet> {
       _result = r;
       if (heard.trim().isNotEmpty && (_best == null || r.score > _best!)) _best = r.score;
     });
-    if (_best != null) widget.onBest(_best!);
+    if (heard.trim().isNotEmpty) {
+      AppState.instance.recordSpeakScore(widget.target, r.score); // 문장별 최고 점수 기억
+      if (r.score > (_sessionBest ?? -1)) _sessionBest = r.score;
+      widget.onBest(_sessionBest!);
+    }
   }
 
   // ---- 화면 ----
@@ -324,7 +346,7 @@ class _SpeakCheckSheetState extends State<_SpeakCheckSheet> {
             Text(
               widget.quiz
                   ? '뜻을 보고 영어로 말하면 정답과 비교해요. 80% 이상이면 정답!'
-                  : '듣고 → 마이크를 누르고 따라 말해보세요.',
+                  : '듣고 → 마이크를 누르고 따라 말해보세요. 천천히 말해도 괜찮아요.',
               style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
             ),
             if (!_useMoonshine) ...[
@@ -355,9 +377,17 @@ class _SpeakCheckSheetState extends State<_SpeakCheckSheet> {
                           Text(
                             w.word,
                             style: englishStyle(context, size: 22).copyWith(
-                              color: !w.counted ? null : (w.ok ? good : scheme.error),
+                              color: !w.counted
+                                  ? null
+                                  : switch (w.mark) {
+                                      WordMark.ok => good,
+                                      WordMark.close => _closeColor,
+                                      WordMark.miss => scheme.error,
+                                    },
                               fontWeight: w.counted && !w.ok ? FontWeight.w700 : null,
-                              decoration: w.counted && !w.ok ? TextDecoration.underline : null,
+                              decoration: w.counted && w.mark == WordMark.miss
+                                  ? TextDecoration.underline
+                                  : null,
                               decorationColor: scheme.error,
                             ),
                           ),
@@ -382,7 +412,7 @@ class _SpeakCheckSheetState extends State<_SpeakCheckSheet> {
                     _decoding
                         ? '받아쓰는 중…'
                         : _listening
-                            ? '듣는 중… 말을 마치면 자동으로 멈춰요'
+                            ? '듣는 중… 말을 마치고 2초쯤 지나면 자동으로 멈춰요'
                             : (_heard.isEmpty ? '아직 말하지 않았어요' : '“$_heard”'),
                     style: englishStyle(context, size: 16)
                         .copyWith(color: scheme.onSurfaceVariant),
@@ -558,7 +588,7 @@ class _ScoreRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final good = AppColors.of(context).good;
-    final color = result.score >= 70 ? good : scheme.error;
+    final color = result.score >= 85 ? good : (result.score >= 65 ? _closeColor : scheme.error);
     return Row(
       children: [
         SizedBox(
@@ -586,7 +616,7 @@ class _ScoreRow extends StatelessWidget {
             children: [
               Text(result.message, style: Theme.of(context).textTheme.bodyLarge),
               if (best != null)
-                Text('최고 기록 $best점',
+                Text(best == 100 ? '이 문장 100점 달성!' : '이 문장 최고 기록 $best점',
                     style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
             ],
           ),
@@ -652,3 +682,6 @@ class _MicButton extends StatelessWidget {
     );
   }
 }
+
+/// "비슷해요"(거의 맞은 단어) 색.
+const _closeColor = Color(0xFFE08A00);

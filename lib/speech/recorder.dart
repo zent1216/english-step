@@ -17,15 +17,21 @@ class TakeRecorder {
   void Function(double level)? onLevel;
 
   static const _rate = 16000;
-  static const _speechLevel = 0.04; // 이보다 크면 말하는 중으로 본다
-  static const _silenceAfterSpeech = Duration(milliseconds: 1300);
-  static const _noSpeechTimeout = Duration(seconds: 7);
-  // Moonshine v2는 10초 넘는 음성에서 문제가 있었던 적이 있어 9초에서 자른다.
-  static const _maxLength = Duration(seconds: 9);
+  // 천천히·띄엄띄엄 말해도 끊기지 않게 넉넉히 기다린다.
+  static const _silenceAfterSpeech = Duration(milliseconds: 2200);
+  static const _noSpeechTimeout = Duration(seconds: 8);
+  // 긴 녹음은 Moonshine 쪽에서 조용한 곳을 기준으로 잘라 나눠 받아쓴다(moonshine.dart).
+  static const _maxLength = Duration(seconds: 20);
+  // 처음 0.3초로 주변 소음을 재서 "말하는 중" 기준을 정한다(작은 목소리도 잡히게).
+  static const _calibration = Duration(milliseconds: 300);
+  static const _minSpeechLevel = 0.012;
 
   bool _heardSpeech = false;
   DateTime _lastLoud = DateTime.now();
   DateTime _started = DateTime.now();
+  double _noiseSum = 0;
+  int _noiseCount = 0;
+  double _speechLevel = 0.03;
 
   Future<bool> hasPermission() => _rec.hasPermission();
 
@@ -33,6 +39,9 @@ class TakeRecorder {
   Future<Float32List> record() async {
     _bytes.clear();
     _heardSpeech = false;
+    _noiseSum = 0;
+    _noiseCount = 0;
+    _speechLevel = 0.03;
     _started = _lastLoud = DateTime.now();
     _done = Completer<Float32List>();
     final stream = await _rec.startStream(const RecordConfig(
@@ -58,6 +67,11 @@ class TakeRecorder {
     final rms = n == 0 ? 0.0 : math.sqrt(sum / n);
     onLevel?.call((rms * 6).clamp(0.0, 1.0));
     final now = DateTime.now();
+    if (now.difference(_started) < _calibration) {
+      _noiseSum += rms;
+      _noiseCount++;
+      _speechLevel = math.max(_minSpeechLevel, (_noiseSum / _noiseCount) * 2.5);
+    }
     if (rms > _speechLevel) {
       _heardSpeech = true;
       _lastLoud = now;
