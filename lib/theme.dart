@@ -147,10 +147,24 @@ ThemeData buildTheme(Brightness b) {
         textStyle: const TextStyle(fontFamily: uiFont, fontWeight: FontWeight.w600),
       ),
     ),
+    // 칩 글자색은 꼭 명시한다(빠뜨리면 선택된 칩 글자가 흰색으로 나와 안 보였음).
     chipTheme: ChipThemeData(
       shape: const StadiumBorder(),
       side: BorderSide(color: border),
-      labelStyle: const TextStyle(fontFamily: uiFont, fontWeight: FontWeight.w600),
+      backgroundColor: card,
+      selectedColor: scheme.primaryContainer,
+      checkmarkColor: scheme.onPrimaryContainer,
+      iconTheme: IconThemeData(color: scheme.primary, size: 18),
+      labelStyle: TextStyle(
+        fontFamily: uiFont,
+        fontWeight: FontWeight.w600,
+        color: scheme.onSurface,
+      ),
+      secondaryLabelStyle: TextStyle(
+        fontFamily: uiFont,
+        fontWeight: FontWeight.w700,
+        color: scheme.onPrimaryContainer,
+      ),
     ),
     bottomSheetTheme: BottomSheetThemeData(
       backgroundColor: card,
