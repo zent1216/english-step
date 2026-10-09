@@ -4,7 +4,9 @@
 돈을 벌려는 앱이 아니다. 광고, 구독, 수익화 장치는 넣지 않는다.
 
 - 미리보기(웹 프로토타입, 화면 흐름 참고용): https://claude.ai/artifact/9owA7v3fc1kBs31iEJqcU4
-- 브랜치: `english-study` (leakcall 저장소 안의 `english_step/` 폴더. 나중에 별도 저장소로 분리 예정)
+- 저장소: **공개** `zent1216/english-step`(main 브랜치). 2026-10-09 leakcall 저장소의 `english_step/` 폴더에서 커밋 기록째 분리함
+  (leakcall은 비공개 유지, 거기의 english_step 폴더·워크플로는 더 이상 안 씀).
+- **배포(친구용 고정 링크, 로그인 불필요)**: https://github.com/zent1216/english-step/releases/latest/download/english_step.apk
 
 ## 기획 배경과 결정 사항 (바꾸지 말 것)
 
@@ -103,11 +105,10 @@
   pubspec의 SDK 조건을 `^3.11.0`으로 낮췄다(새 버전 전용 문법은 안 씀).
 
 ## 빌드 / 실행 (PC에서)
-- **GitHub Actions 자동 빌드**(`.github/workflows/english_step_apk.yml`): `english-study` 브랜치에
-  `english_step/` 변경을 푸시하면 analyze → test → release APK를 빌드한다. 빌드 번호 = 실행 번호(자동 증가).
-  - **폰에서 바로 받는 고정 주소**(항상 최신): https://github.com/zent1216/leakcall/releases/download/english-step-latest/english_step.apk
-    (빌드마다 `english-step-latest` 릴리스를 지우고 다시 만든다. 저장소가 비공개면 GitHub 로그인 필요)
-  - 같은 APK가 Actions → 해당 실행 → Artifacts에도 있다(30일 보관). 디스크가 빠듯해 debug APK는 빌드하지 않는다.
+- **GitHub Actions 자동 빌드**(`.github/workflows/apk.yml`): main에 푸시하면(.md만 바뀐 건 제외) analyze → test →
+  release APK를 빌드해 `apk-latest` 릴리스(Latest)로 올린다. 빌드 번호 = 실행 번호 + 10(leakcall에서 10까지 빌드했으므로 이어서).
+  - 고정 주소: https://github.com/zent1216/english-step/releases/latest/download/english_step.apk
+  - 디스크가 빠듯해 debug APK는 빌드하지 않는다.
 - **요즘 폰(arm64-v8a)만 지원** (대상: 갤럭시 A36, S25 등): build.gradle.kts의 `abiFilters`와 Actions의 `--target-platform android-arm64`로
   구형 32비트폰·x86 에뮬레이터용 코드를 뺐다(용량 절감). 에뮬레이터로 테스트하려면 arm64 이미지를 쓰거나 abiFilters를 잠시 풀 것.
 - **서명 키 고정**: `android/app/ci-debug.keystore`(비밀번호 android, 테스트 전용)를 PC 빌드와 Actions 빌드가 같이 쓴다.
@@ -116,7 +117,7 @@
 - 클라우드 환경은 Android SDK 다운로드 서버(dl.google.com)가 막혀 있어서 APK를 만들 수 없다. **PC 또는 Actions에서 빌드한다.**
 - `cd english_step` → `flutter pub get` → `flutter run`, 또는 `flutter build apk --debug` → `adb install -r build\app\outputs\flutter-apk\app-debug.apk`
 - 패키지 ID는 `com.facilitymanager.english_step`
-- 오버레이를 쓰지 않으니 leakcall 같은 삼성 사이드로드 오버레이 차단 문제는 없다. 그래도 Play 배포가 필요하면 leakcall의 내부 테스트 절차(루트 CLAUDE.md)를 참고한다.
+- 오버레이를 쓰지 않으니 leakcall 같은 삼성 사이드로드 오버레이 차단 문제는 없다. 
 - 유튜브 재생에는 인터넷 권한(`android.permission.INTERNET`)이 필요하다. 릴리스 빌드에서는 AndroidManifest에 명시해야 한다.
 
 - 웹 미리보기: 저장소 루트 `.claude/launch.json`의 `english_step-web`(flutter run -d web-server, 포트 8765).
@@ -173,18 +174,18 @@
 
 
 ## Google Play 내부 테스트 배포 (2026-10-09 준비)
-- 친구 배포는 **Play 내부 테스트**로 한다(leakcall과 같은 방식, 자동 업데이트). leakcall 저장소가 비공개라
-  GitHub 릴리스 링크는 로그인한 본인만 받을 수 있다. **leakcall 저장소는 공개로 바꾸면 안 됨**(leakcall 업로드 키가 들어 있음).
+- **결정(2026-10-09): Play 배포는 하지 않는다.** 친구 배포는 이 공개 저장소의 릴리스 링크로 한다(위 '빌드 / 실행').
+  아래는 나중에 Play로 갈 때를 위한 준비 내용(서명 설정은 남겨둠).
 - 서명: 직접 설치용 APK = `ci-debug.keystore`(테스트 키, 저장소에 있음). Play용 AAB = **업로드 키**(저장소에 없음).
   - `build.gradle.kts`가 `android/key.properties`(커밋 안 됨: storeFile, storePassword, keyAlias) 또는 환경변수
     `UPLOAD_KEYSTORE_PATH`/`UPLOAD_KEYSTORE_PASSWORD`에서 읽는다. `-PplayUpload`(flutter는
     `--android-project-arg=playUpload=true`)일 때만 업로드 키로 서명.
   - GitHub Actions: Secrets `UPLOAD_KEYSTORE_BASE64`(jks를 base64), `UPLOAD_KEYSTORE_PASSWORD`가 있으면
-    AAB도 빌드해 `english-step-latest` 릴리스에 `english_step.aab`로 올린다.
+    AAB도 빌드해 `apk-latest` 릴리스에 `english_step.aab`로 올린다.
   - 업로드 키 비밀번호를 소스에 하드코딩하려다 자동 안전 검사에 막혔다 → 비밀값은 Secrets/key.properties로만.
 - Play 앱 서명(Play App Signing)을 쓰므로 Play가 자기 키로 재서명한다. 그래서 **직접 설치한 앱과 Play 앱은 서명이
   달라** 같은 폰에서 바꿔 설치하려면 한 번 삭제해야 한다.
-- 개인정보처리방침 원문: `english_step/PRIVACY.md` (공개 URL로 올려서 Play Console에 입력해야 함. 문의 이메일 채울 것).
+- 개인정보처리방침 원문: `PRIVACY.md` (공개 URL로 올려서 Play Console에 입력해야 함. 문의 이메일 채울 것).
 - 마이크 사용 앱이라 Play Console의 데이터 보안 양식에 "오디오: 수집 안 함(기기 내 처리)"로 답한다.
 - 첫 AAB는 Play Console에서 손으로 올려야 한다(Google 정책). 그 뒤 자동 업로드를 원하면 서비스 계정 JSON을 Secrets에 넣고
   업로드 단계를 추가할 것(아직 안 함).

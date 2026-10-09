@@ -1,17 +1,18 @@
-# english_step
+# 영어 한 걸음
 
-A new Flutter project.
+무료 영어 학습 앱(안드로이드). 광고·회원가입 없음.
 
-## Getting Started
+- **이야기**: 수준별 짧은 영어 이야기를 듣고 읽기, 표현 누르면 뜻, 이해 퀴즈
+- **Lv.0 첫걸음 문장**: 짧은 문장 200개
+- **팝송 연습**: 유튜브 영상 + 가사, 속도 조절·한 줄 반복·빈칸/첫 글자/숨기기 단계
+- **따라 말하기**: 폰 안에서 도는 음성 인식(Moonshine)으로 단어별 발음 체크
+- **단어장**: 간격 반복 복습, 말해서 답하기
 
-This project is a starting point for a Flutter application.
+## 설치
+1. 폰에서 이 링크를 엽니다: **https://github.com/zent1216/english-step/releases/latest/download/english_step.apk**
+2. 받은 파일을 눌러 설치합니다. 처음에 "출처를 알 수 없는 앱 설치 허용"을 한 번 켜야 할 수 있어요.
+3. 새 버전이 나오면 같은 링크로 받아 다시 설치하면 업데이트됩니다(기록 유지).
 
-A few resources to get you started if this is your first Flutter project:
+요즘 안드로이드폰(64비트)용입니다. 따라 말하기의 정확한 음성 인식은 처음 한 번 약 111MB를 내려받습니다(Wi-Fi 권장).
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+개인정보처리방침: [PRIVACY.md](PRIVACY.md)
