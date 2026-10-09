@@ -122,7 +122,7 @@ class _WordPracticeSheetState extends State<_WordPracticeSheet> {
   // ---- 따라 말하기 ----
   Future<void> _speak() async {
     await Speaker.instance.stop();
-    if (!_engine.isReady) {
+    if (!_engine.isReady || AppState.instance.usePhoneAsr) {
       // Moonshine이 없으면 기존 따라 말하기 시트(폰 기본 인식)로.
       if (!mounted) return;
       final s = await showSpeakCheckSheet(context, widget.word, ko: _gloss ?? '');

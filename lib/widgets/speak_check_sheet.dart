@@ -181,7 +181,7 @@ class _SpeakCheckSheetState extends State<_SpeakCheckSheet> {
     if (mounted) setState(() {});
   }
 
-  bool get _useMoonshine => _engine.isReady;
+  bool get _useMoonshine => _engine.isReady && !AppState.instance.usePhoneAsr;
 
   Future<void> _start() async {
     await Speaker.instance.stop();
@@ -375,7 +375,17 @@ class _SpeakCheckSheetState extends State<_SpeakCheckSheet> {
                     style: text.titleLarge?.copyWith(fontWeight: FontWeight.w700),
                   ),
                 ),
-                _EngineChip(moonshine: _useMoonshine),
+                _EngineChip(
+                  moonshine: _useMoonshine,
+                  // 모델이 있으면 눌러서 엔진을 바꿀 수 있다(같은 말을 두 엔진으로 비교).
+                  onTap: !_engine.isReady || _listening || _decoding
+                      ? null
+                      : () => setState(() {
+                            AppState.instance.setUsePhoneAsr(!AppState.instance.usePhoneAsr);
+                            _result = null;
+                            _heard = '';
+                          }),
+                ),
               ],
             ),
             const SizedBox(height: 4),
@@ -387,7 +397,7 @@ class _SpeakCheckSheetState extends State<_SpeakCheckSheet> {
             ),
             const SizedBox(height: 6),
             const Align(alignment: Alignment.centerLeft, child: NoisyToggle()),
-            if (!_useMoonshine) ...[const SizedBox(height: 14), _ModelCard(engine: _engine)],
+            if (!_engine.isReady) ...[const SizedBox(height: 14), _ModelCard(engine: _engine)],
             const SizedBox(height: 18),
             // 문장(결과가 나오면 단어별 색칠)
             Container(
@@ -582,24 +592,43 @@ class NoisyToggle extends StatelessWidget {
 }
 
 class _EngineChip extends StatelessWidget {
-  const _EngineChip({required this.moonshine});
+  const _EngineChip({required this.moonshine, this.onTap});
   final bool moonshine;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: moonshine ? scheme.primaryContainer : scheme.surfaceContainerHighest,
+    return Tooltip(
+      message: onTap == null ? '' : '눌러서 음성 인식 엔진 바꾸기',
+      child: InkWell(
         borderRadius: BorderRadius.circular(99),
-      ),
-      child: Text(
-        moonshine ? 'Moonshine' : '기본 인식',
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: moonshine ? scheme.onPrimaryContainer : scheme.onSurfaceVariant,
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: moonshine ? scheme.primaryContainer : scheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(99),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                moonshine ? 'Moonshine' : '폰 기본 인식',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: moonshine ? scheme.onPrimaryContainer : scheme.onSurfaceVariant,
+                ),
+              ),
+              if (onTap != null) ...[
+                const SizedBox(width: 2),
+                Icon(Icons.swap_horiz_rounded,
+                    size: 14,
+                    color: moonshine ? scheme.onPrimaryContainer : scheme.onSurfaceVariant),
+              ],
+            ],
+          ),
         ),
       ),
     );

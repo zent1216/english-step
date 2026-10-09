@@ -256,3 +256,14 @@
   통화할 때처럼 여러 마이크로 주변 소음을 지운다. 조용한 곳에서는 목소리가 조금 뭉개질 수 있어 기본은 꺼짐.
 - 설정 `AppState.noisyMode`(SharedPreferences `noisyMode`). 체크 칸 `NoisyToggle`(따라 말하기 시트, 단어 발음 연습 시트), ⓘ 시트 스위치.
   `TakeRecorder.record(noisy: ...)`로 전달. 실기기에서 효과 비교 필요(클라우드에서는 확인 불가).
+
+## 약형 한글 표기 + 엔진 바꾸기 (2026-10-09)
+- 피드백: "an이 언인데 앤으로 나옴", "latte가 라테이로 나옴", "latte를 잘 말해도 nothing으로 인식".
+- 한글 발음: 문장 속 기능어는 약형(`_weakForms`: a 어, an 언, the 더/모음 앞 디, of 어브, to 투). 단어 하나만 있으면 원래 소리(an → 앤).
+  latte/cafe 같은 외래어는 `_overrides`(라테, 카페).
+- 음성 인식: 따라 말하기 시트 오른쪽 위 엔진 칩을 누르면 **Moonshine ↔ 폰 기본 인식(구글/삼성)** 전환(`AppState.usePhoneAsr`,
+  SharedPreferences `usePhoneAsr`). 폰 기본 인식은 큰 어휘·언어 모델이라 latte 같은 단어에 강할 수 있다. 단어 연습 시트도 따른다.
+- **근본 해결 후보(다음 단계)**: 단어로 받아쓰지 않고 **음소(발음기호) 단위로 인식**해 CMU 사전의 정답 발음과 비교(GOP 방식, ELSA류).
+  후보 모델: wav2vec2 음소 인식 ONNX(buddy-pronunciation-onnx 영어 int8 약 357MB, ARPAbet, Apache-2.0 /
+  speako-phoneme-recognizer 약 355MB, IPA / charsiu 프레임 분류 정렬기 약 123MB). sherpa-onnx로는 못 돌려서
+  onnxruntime을 직접 써야 하고(sherpa_onnx의 libonnxruntime과 충돌 여부 확인 필요), 클라우드 세션에서 huggingface.co가 막혀 있어 시험 불가.

@@ -43,7 +43,9 @@ void main() {
     await HangulPron.instance.load();
     expect(HangulPron.instance.isReady, isTrue);
     expect(HangulPron.instance.sentence('Have a nice day!'), '해브 어 나이스 데이');
-    expect(HangulPron.instance.sentence('Can I have an iced latte, please?'), contains('플리즈'));
+    expect(HangulPron.instance.sentence('Can I have an iced latte, please?'), '캔 아이 해브 언 아이스트 라테 플리즈');
+    expect(HangulPron.instance.sentence('the apple'), '디 애플');
+    expect(HangulPron.instance.word('an'), '앤'); // 단어 하나만 있으면 원래 소리
   });
 
   testWidgets('"한글 발음" 체크로 보이기/숨기기', (tester) async {

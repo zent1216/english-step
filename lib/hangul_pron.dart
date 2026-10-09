@@ -47,7 +47,25 @@ class HangulPron extends ChangeNotifier {
         .replaceAll('’', "'")
         .split(RegExp(r"[^A-Za-z0-9']+"))
         .where((w) => w.replaceAll("'", '').isNotEmpty);
-    return words.map(word).where((w) => w.isNotEmpty).join(' ');
+    final list = words.toList();
+    final out = <String>[];
+    for (var i = 0; i < list.length; i++) {
+      final key = list[i].toLowerCase();
+      // 문장 속 기능어는 약하게 소리 난다(an → 언, a → 어, the → 더). 단어 하나만 있으면 원래 소리.
+      var weak = list.length > 1 ? _weakForms[key] : null;
+      if (key == 'the' && list.length > 1 && i + 1 < list.length && _startsWithVowel(list[i + 1])) {
+        weak = '디'; // 모음 앞 the
+      }
+      final h = weak ?? word(list[i]);
+      if (h.isNotEmpty) out.add(h);
+    }
+    return out.join(' ');
+  }
+
+  bool _startsWithVowel(String w) {
+    final ph = _dict?[w.toLowerCase()];
+    if (ph != null && ph.isNotEmpty) return _isVowel(ph.first.replaceAll(RegExp(r'\d'), ''));
+    return RegExp('^[aeiouAEIOU]').hasMatch(w);
   }
 
   /// 단어 하나를 한글로.
@@ -82,7 +100,15 @@ const _overrides = <String, String>{
   'of': '어브',
   'okay': '오케이',
   'ok': '오케이',
+  // 사전에는 "라테이"처럼 나오지만 실제로는 끝 모음을 짧게 말하는 외래어
+  'latte': '라테',
+  'lattes': '라테스',
+  'cafe': '카페',
+  'café': '카페',
 };
+
+// 문장 속에서 약하게 소리 나는 기능어(약형). 강하게 말할 때는 사전 소리(an → 앤).
+const _weakForms = <String, String>{'a': '어', 'an': '언', 'the': '더', 'of': '어브', 'to': '투'};
 
 // ---- 발음기호(ARPAbet) → 한글 ----
 

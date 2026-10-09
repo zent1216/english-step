@@ -24,6 +24,7 @@ class AppState extends ChangeNotifier {
   double speechRate = 0.9;
   bool showPron = true; // 영어 아래 한글 발음 표기
   bool noisyMode = false; // 시끄러운 곳 모드(통화용 녹음으로 주변 소음 줄이기)
+  bool usePhoneAsr = false; // Moonshine 대신 폰 기본 음성 인식(구글/삼성) 쓰기
   // 따라 말하기 문장별 최고 점수(0~100). 키는 [speakKey].
   Map<String, int> speakScores = {};
 
@@ -36,6 +37,7 @@ class AppState extends ChangeNotifier {
     speechRate = p.getDouble('speechRate') ?? 0.9;
     showPron = p.getBool('showPron') ?? true;
     noisyMode = p.getBool('noisyMode') ?? false;
+    usePhoneAsr = p.getBool('usePhoneAsr') ?? false;
     try {
       final raw = p.getString('speakScores');
       speakScores = raw == null
@@ -160,6 +162,13 @@ class AppState extends ChangeNotifier {
     speechRate = 0.9;
     showPron = true;
     noisyMode = false;
+    usePhoneAsr = false;
+    notifyListeners();
+  }
+
+  void setUsePhoneAsr(bool v) {
+    usePhoneAsr = v;
+    _prefs?.setBool('usePhoneAsr', v);
     notifyListeners();
   }
 
