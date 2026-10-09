@@ -5,6 +5,7 @@ import '../models.dart';
 import '../theme.dart';
 import '../widgets/marked_text.dart';
 import '../widgets/speak_check_sheet.dart';
+import '../widgets/pron_text.dart';
 
 /// 이야기 읽기: 문장별 듣기/해석, 전체 듣기, 끝에 이해 확인 퀴즈.
 class StoryReaderScreen extends StatefulWidget {
@@ -63,6 +64,7 @@ class _StoryReaderScreenState extends State<StoryReaderScreen> {
       appBar: AppBar(
         title: Text('Lv.${story.level} ${story.levelName}'),
         actions: [
+          const PronToggle(),
           IconButton(
             tooltip: '듣기 속도',
             icon: const Icon(Icons.speed),
@@ -146,6 +148,7 @@ class _StoryReaderScreenState extends State<StoryReaderScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   MarkedText(s.en),
+                  PronText(s.en),
                   if (showKo)
                     Padding(
                       padding: const EdgeInsets.only(top: 2),

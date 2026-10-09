@@ -22,6 +22,7 @@ class AppState extends ChangeNotifier {
   Set<String> doneStories = {};
   Set<String> doneSets = {}; // Lv.0 첫걸음 문장 세트 (lv0-0 ~ lv0-19)
   double speechRate = 0.9;
+  bool showPron = true; // 영어 아래 한글 발음 표기
   // 따라 말하기 문장별 최고 점수(0~100). 키는 [speakKey].
   Map<String, int> speakScores = {};
 
@@ -32,6 +33,7 @@ class AppState extends ChangeNotifier {
     doneStories = (p.getStringList('doneStories') ?? []).toSet();
     doneSets = (p.getStringList('doneSets') ?? []).toSet();
     speechRate = p.getDouble('speechRate') ?? 0.9;
+    showPron = p.getBool('showPron') ?? true;
     try {
       final raw = p.getString('speakScores');
       speakScores = raw == null
@@ -154,6 +156,13 @@ class AppState extends ChangeNotifier {
     doneSets = {};
     speakScores = {};
     speechRate = 0.9;
+    showPron = true;
+    notifyListeners();
+  }
+
+  void setShowPron(bool v) {
+    showPron = v;
+    _prefs?.setBool('showPron', v);
     notifyListeners();
   }
 

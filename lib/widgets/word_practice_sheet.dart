@@ -18,6 +18,7 @@ import '../speech/recorder.dart';
 import '../theme.dart';
 import '../translate.dart';
 import 'speak_check_sheet.dart';
+import 'pron_text.dart';
 
 /// 화면용 단어 정리: 앞뒤 문장부호를 뗀다("home." → "home", "I'm"은 그대로).
 String cleanWord(String w) => w.replaceAll(RegExp(r"^[^A-Za-z0-9]+|[^A-Za-z0-9]+$"), '');
@@ -239,6 +240,7 @@ class _WordPracticeSheetState extends State<_WordPracticeSheet> {
                 ),
               ],
             ),
+            PronText(widget.word, size: 18),
             const SizedBox(height: 2),
             if (_glossLoading)
               Text('뜻 찾는 중…', style: text.bodyLarge?.copyWith(color: scheme.onSurfaceVariant))

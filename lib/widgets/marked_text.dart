@@ -5,6 +5,7 @@ import '../app_state.dart';
 import '../models.dart';
 import '../theme.dart';
 import 'speak_check_sheet.dart';
+import 'pron_text.dart';
 
 /// `[표현|뜻]` 표시가 들어간 영어 문장. 학습 포인트는 형광펜으로 칠하고, 누르면 뜻 바텀시트를 띄운다.
 class MarkedText extends StatefulWidget {
@@ -80,6 +81,7 @@ Future<void> showGlossSheet(BuildContext context, String word, String gloss, Str
                 SpeakCheckButton(word, ko: gloss),
               ],
             ),
+            PronText(word, size: 15),
             const SizedBox(height: 8),
             Text(gloss, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 12),

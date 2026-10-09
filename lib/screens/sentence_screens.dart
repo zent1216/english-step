@@ -5,6 +5,7 @@ import '../sentences.dart';
 import '../theme.dart';
 import '../widgets/marked_text.dart';
 import '../widgets/speak_check_sheet.dart';
+import '../widgets/pron_text.dart';
 
 /// Lv.0 첫걸음 문장: 20세트 목록.
 class SentenceSetListScreen extends StatelessWidget {
@@ -122,6 +123,7 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
       appBar: AppBar(
         title: Text('Lv.0 · ${widget.index + 1}세트'),
         actions: [
+          const PronToggle(),
           IconButton(
             tooltip: '듣기 속도',
             icon: const Icon(Icons.speed),
@@ -184,7 +186,10 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
     final scheme = Theme.of(context).colorScheme;
     final s = items[i];
     final open = _revealed.contains(i);
-    final enText = Text(s.en, style: englishStyle(context, size: 20));
+    final enText = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [Text(s.en, style: englishStyle(context, size: 20)), PronText(s.en)],
+    );
     final koText = Text(s.ko, style: const TextStyle(fontSize: 16));
     final hidden = Text(
       _speakMode ? '눌러서 영어 보기' : '눌러서 해석 보기',

@@ -210,7 +210,19 @@ class _AppInfoSheetState extends State<_AppInfoSheet> {
                 }
               },
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
+            ListenableBuilder(
+              listenable: AppState.instance,
+              builder: (context, _) => SwitchListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                secondary: const Icon(Icons.translate_rounded),
+                title: const Text('한글 발음 보기'),
+                subtitle: const Text('영어 아래에 "해브 어 나이스 데이"처럼 적어줘요'),
+                value: AppState.instance.showPron,
+                onChanged: AppState.instance.setShowPron,
+              ),
+            ),
+            const SizedBox(height: 8),
             Text('데이터 관리', style: text.titleSmall),
             const SizedBox(height: 4),
             Text('이 폰 안에만 저장돼요. 앱을 지우면 함께 지워져요.',
@@ -241,6 +253,10 @@ class _AppInfoSheetState extends State<_AppInfoSheet> {
             TextButton(
               onPressed: () => openExternal(privacyUrl),
               child: const Text('개인정보처리방침'),
+            ),
+            TextButton(
+              onPressed: () => showLicensePage(context: context, applicationName: '영어 한 걸음'),
+              child: const Text('오픈소스 라이선스 (발음 사전·글꼴 등)'),
             ),
           ],
         ),

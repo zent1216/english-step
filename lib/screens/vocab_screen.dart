@@ -4,6 +4,7 @@ import '../app_state.dart';
 import '../models.dart';
 import '../theme.dart';
 import '../widgets/speak_check_sheet.dart';
+import '../widgets/pron_text.dart';
 
 /// 단어장: 오늘 복습할 개수, 복습 시작, 전체 목록(듣기/삭제).
 class VocabScreen extends StatelessWidget {
@@ -115,7 +116,10 @@ class _VocabTile extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return ListTile(
       title: Text(item.word, style: englishStyle(context, size: 17).copyWith(height: 1.3)),
-      subtitle: Text(item.gloss),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [PronText(item.word, size: 13), Text(item.gloss)],
+      ),
       leading: Tooltip(
         message: '복습 단계 ${item.box}/${reviewIntervalsDays.length - 1}',
         child: SizedBox(
@@ -278,6 +282,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                         textAlign: TextAlign.center,
                         style: englishStyle(context, size: 28).copyWith(height: 1.3),
                       ),
+                      PronText(item.word, size: 16, textAlign: TextAlign.center),
                       const SizedBox(height: 12),
                       ListenSpeakButtons(item.word, ko: item.gloss),
                     ],

@@ -11,6 +11,7 @@ import '../theme.dart';
 import '../translate.dart';
 import '../widgets/marked_text.dart';
 import '../widgets/speak_check_sheet.dart';
+import '../widgets/pron_text.dart';
 
 const _rates = [0.5, 0.75, 0.9, 1.0, 1.25];
 const _stageNames = ['전체', '빈칸', '첫 글자', '숨기기'];
@@ -587,6 +588,8 @@ class _SongPracticeScreenState extends State<SongPracticeScreen> {
             selected: _showKo,
             onSelected: (v) => setState(() => _showKo = v),
           ),
+          const SizedBox(width: 4),
+          const PronToggle(),
           if (_trTotal > 0) ...[
             const SizedBox(width: 8),
             Chip(
@@ -667,6 +670,7 @@ class _SongPracticeScreenState extends State<SongPracticeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     en,
+                    if (revealed) PronText(l.en),
                     if (showKo)
                       Text(l.ko, style: TextStyle(color: scheme.onSurfaceVariant)),
                   ],

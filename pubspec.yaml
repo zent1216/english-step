@@ -72,6 +72,9 @@ flutter:
 
   assets:
     - assets/tatoeba_lv0.json
+    # CMU 발음 사전(BSD 라이선스, 한글 발음 표기용). 라이선스: assets/cmudict-LICENSE.txt
+    - assets/cmudict.txt.gz
+    - assets/cmudict-LICENSE.txt
 
   # 무료 공개 글꼴(SIL OFL 1.1). 라이선스: assets/fonts/*-OFL.txt
   fonts:

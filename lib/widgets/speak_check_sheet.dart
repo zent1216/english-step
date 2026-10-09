@@ -14,6 +14,7 @@ import '../speech/moonshine.dart';
 import '../speech/recorder.dart';
 import '../theme.dart';
 import 'word_practice_sheet.dart';
+import 'pron_text.dart';
 
 /// 말하기(따라 말하기) 버튼. 듣기 버튼 옆에 짝으로 둔다. 누르면 [showSpeakCheckSheet]가 열린다.
 class SpeakCheckButton extends StatelessWidget {
@@ -443,6 +444,7 @@ class _SpeakCheckSheetState extends State<_SpeakCheckSheet> {
                       ],
                     ),
                   ],
+                  if (!(widget.quiz && r == null)) PronText(widget.target, size: 15),
                   if (widget.ko.isNotEmpty && !(widget.quiz && r == null)) ...[
                     const SizedBox(height: 6),
                     Text(

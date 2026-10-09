@@ -238,3 +238,14 @@
   - 소리 열쇠(`consonantSkeleton`): gh 묵음, c(e/i/y 앞)→s, 유성·무성 같은 소리(b=p, d=t, g=k, v=f, z=s).
   - 정렬에 단어 경계 이동 추가: 원문 1↔들은 말 2(latte↔"la tay"), 2↔1, 2↔2("an iced"↔"a nice")를 이어 붙여 비교 → "비슷해요"(0.7).
     그중 한 쌍이라도 그대로 맞으면 경계 문제가 아니라고 보고 쓰지 않음("is in"↔"is on", "latte please"↔"tea please"는 그대로 틀림).
+
+## 한글 발음 표기 (2026-10-09)
+- 영어 아래에 "해브 어 나이스 데이"처럼 한글 발음을 적는다(`lib/hangul_pron.dart`, `lib/widgets/pron_text.dart`).
+- **CMU 발음 사전**(카네기멜런대, BSD 라이선스) 12만 단어를 `assets/cmudict.txt.gz`(약 0.85MB)로 넣고, 앱 시작 때 백그라운드로 읽는다.
+  라이선스 원문 `assets/cmudict-LICENSE.txt`는 main에서 `LicenseRegistry`에 등록(출처 표시 의무).
+- 발음기호(ARPAbet) → 한글 규칙: 소리 나는 대로(meet → 미트, cat → 캣, please → 플리즈, where → 웨어, boats → 보츠, home → 홈, go → 고우).
+  사전에 없는 단어(이름 등)는 철자 규칙으로 대충 읽는다. 어색한 흔한 단어는 `_overrides`(good → 굿 등)에 직접 적는다.
+- **"한글 발음" 체크 칸**(`PronToggle`)으로 보이기/숨기기. 설정은 `AppState.showPron`(SharedPreferences `showPron`, 기본 켜짐), 모든 화면 공통.
+  체크 칸 위치: 이야기 읽기·Lv.0 연습 위쪽 바, 팝송 연습 단계 줄, 앱 정보(ⓘ) 시트 스위치.
+- 표시 위치: 이야기 문장, Lv.0 카드(영어가 보일 때만), 팝송 가사(정답이 보일 때만 — 빈칸 단계에서 답이 새지 않게),
+  표현 뜻 시트, 단어장 목록·복습 카드, 따라 말하기 시트(퀴즈 모드는 결과 뒤), 단어 발음 연습 시트.
