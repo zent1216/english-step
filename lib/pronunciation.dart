@@ -154,10 +154,24 @@ int _editDistance(String a, String b) {
   return prev[b.length];
 }
 
-/// 자음 뼈대: 모음과 겹친 글자를 빼고 비슷한 소리를 하나로(c/k/q→k, ph→f, ck→k).
-/// 단어 하나만 말하면 음성 인식이 모음을 잘 헷갈려서(meet→mate, home→hum) 뼈대가 같으면 "비슷해요"로 본다.
+/// 소리 열쇠: 모음을 빼고 비슷한 소리는 하나로 모은다.
+/// - 철자 묶음: ph→f, gh(묵음), ck→k, c(e/i/y 앞)→s, 나머지 c·q→k, x→ks
+/// - 유성·무성은 같은 소리로(b=p, d=t, g=k, v=f, z=s). 미국식 latte는 "라디"처럼 들려서 t/d를 구분하지 않는다.
+/// 음성 인식이 모음과 단어 경계를 잘 헷갈려서(meet→mate, latte→"la tay") 열쇠가 같으면 "비슷해요"로 본다.
 String consonantSkeleton(String w) {
-  var x = w.toLowerCase().replaceAll('ph', 'f').replaceAll('ck', 'k').replaceAll(RegExp('[cq]'), 'k');
+  var x = w.toLowerCase().replaceAll(RegExp('[^a-z]'), '');
+  x = x
+      .replaceAll('ph', 'f')
+      .replaceAll('gh', '')
+      .replaceAll('ck', 'k')
+      .replaceAll(RegExp('c(?=[eiy])'), 's')
+      .replaceAll(RegExp('[cq]'), 'k')
+      .replaceAll('x', 'ks')
+      .replaceAll('b', 'p')
+      .replaceAll('d', 't')
+      .replaceAll('g', 'k')
+      .replaceAll('v', 'f')
+      .replaceAll('z', 's');
   x = x.replaceAll(RegExp('[aeiouyhw]'), '');
   return x.replaceAllMapped(RegExp(r'(.)\1+'), (m) => m.group(1)!);
 }
@@ -174,6 +188,24 @@ double wordMatch(String target, String heard) {
   return sim >= 0.7 ? 0.7 : 0;
 }
 
+/// 여러 단어를 이어 붙여 비교(단어 경계가 달라진 경우: latte ↔ "la tay", "an iced" ↔ "a nice").
+/// [t]·[h]는 이어 붙일 원문 단어들과 들은 단어들. 그중 한 쌍이라도 그대로 맞으면 경계 문제가 아니므로 0.
+/// 소리 열쇠가 같거나 글자가 70% 이상 같으면 0.7(이어 붙인 글자가 완전히 같으면 1).
+double _spanMatch(List<String> t, List<String> h) {
+  for (final a in t) {
+    for (final b in h) {
+      if (wordMatch(a, b) >= 1) return 0;
+    }
+  }
+  final target = t.join(), heard = h.join();
+  if (target.length < 3 || heard.isEmpty) return 0;
+  if (target == heard) return 1;
+  final k = consonantSkeleton(target);
+  if (k.isNotEmpty && k == consonantSkeleton(heard)) return 0.7;
+  final longer = target.length > heard.length ? target.length : heard.length;
+  return 1 - _editDistance(target, heard) / longer >= 0.7 ? 0.7 : 0;
+}
+
 /// [target]은 `[표현|뜻]` 표시가 있어도 된다.
 SpeakResult checkSpeech(String target, String heard) {
   final display = plainText(target).split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
@@ -188,30 +220,51 @@ SpeakResult checkSpeech(String target, String heard) {
   }
   final hk = [for (final w in heard.split(RegExp(r'\s+'))) ..._expand(normalizeWord(w))];
 
-  // 가중 LCS: 순서를 지키면서 맞은 정도(1/0.7)의 합이 가장 큰 짝을 찾는다.
+  // 가중 정렬: 순서를 지키면서 맞은 정도(1/0.7)의 합이 가장 큰 짝을 찾는다.
+  // 한 단어↔한 단어 외에, 단어 경계가 달라진 경우(원문 1↔들은 2, 원문 2↔들은 1, 2↔2)도 이어 붙여 비교한다.
   final n = keys.length, m = hk.length;
   final dp = List.generate(n + 1, (_) => List<double>.filled(m + 1, 0));
+  // 각 칸에서 고른 이동: (원문 몇 개, 들은 말 몇 개, 단어당 점수)
+  final pick = List.generate(n + 1, (_) => List<(int, int, double)>.filled(m + 1, (0, 0, 0)));
   for (var i = n - 1; i >= 0; i--) {
     for (var j = m - 1; j >= 0; j--) {
-      final s = wordMatch(keys[i], hk[j]);
-      var best = dp[i + 1][j] > dp[i][j + 1] ? dp[i + 1][j] : dp[i][j + 1];
-      if (s > 0 && dp[i + 1][j + 1] + s > best) best = dp[i + 1][j + 1] + s;
+      var best = dp[i + 1][j];
+      var choice = (1, 0, 0.0);
+      if (dp[i][j + 1] > best) {
+        best = dp[i][j + 1];
+        choice = (0, 1, 0.0);
+      }
+      void tryMove(int di, int dj, double s) {
+        if (s <= 0) return;
+        final v = dp[i + di][j + dj] + s * di;
+        if (v > best + 1e-9) {
+          best = v;
+          choice = (di, dj, s);
+        }
+      }
+
+      tryMove(1, 1, wordMatch(keys[i], hk[j]));
+      if (j + 1 < m) tryMove(1, 2, _spanMatch([keys[i]], [hk[j], hk[j + 1]]));
+      if (i + 1 < n) tryMove(2, 1, _spanMatch([keys[i], keys[i + 1]], [hk[j]]));
+      if (i + 1 < n && j + 1 < m) {
+        // 경계가 실제로 옮겨진 경우만(같은 자리에서 끊기면 1↔1 비교와 같다)
+        if (keys[i].length != hk[j].length) {
+          tryMove(2, 2, _spanMatch([keys[i], keys[i + 1]], [hk[j], hk[j + 1]]));
+        }
+      }
       dp[i][j] = best;
+      pick[i][j] = choice;
     }
   }
   final got = List<double>.filled(n, 0);
   var i = 0, j = 0;
   while (i < n && j < m) {
-    final s = wordMatch(keys[i], hk[j]);
-    if (s > 0 && (dp[i][j] - (dp[i + 1][j + 1] + s)).abs() < 1e-9) {
-      got[i] = s;
-      i++;
-      j++;
-    } else if (dp[i + 1][j] >= dp[i][j + 1]) {
-      i++;
-    } else {
-      j++;
+    final (di, dj, s) = pick[i][j];
+    for (var k = 0; k < di; k++) {
+      got[i + k] = s;
     }
+    i += di;
+    j += dj;
   }
 
   // 원문 단어별로 모은다: 전부 맞으면 ok, 일부라도 맞으면 close, 아니면 miss.

@@ -227,3 +227,14 @@
   열자마자 원어민 소리(보통/천천히), 큰 단어 + 뜻(ML Kit 기기 내 번역, 모델 없으면 "뜻 보기" 버튼), 나온 문장에서 단어 형광펜,
   **3번 따라 말하기** 점(70점 이상이면 하나씩 채움, 틀리면 천천히 다시 들려줌), 단어 옆 **단어장에 담기**.
   Moonshine이 없으면 마이크는 기존 따라 말하기 시트(폰 기본 인식)로 넘어간다.
+
+## 단어 경계 인식 대응 (2026-10-09)
+- 피드백: "Can I have an iced latte, please?"가 계속 다르게 인식됨.
+- 실험(클라우드, 다화자 TTS libritts_r 등 6개 목소리 × 자연/천천히/끊어 읽기):
+  - 대부분 문장은 Moonshine으로 100점. 문제는 **드문 단어 + 단어 경계**: "iced latte" → "a nice light day", "ice flight", "lite".
+  - 다른 엔진도 시험했지만 Moonshine보다 못함: Zipformer 스트리밍 + 핫워드(목표 문장 편향), 키워드 검출(KWS), NeMo CTC.
+    두 엔진 후보를 합쳐도 +1점 정도라 엔진 추가는 안 함. (저음질 TTS amy-low는 단어 하나만 말하면 뭉개져 실험용으로 부적합)
+- 그래서 **채점 개선**(`lib/pronunciation.dart`):
+  - 소리 열쇠(`consonantSkeleton`): gh 묵음, c(e/i/y 앞)→s, 유성·무성 같은 소리(b=p, d=t, g=k, v=f, z=s).
+  - 정렬에 단어 경계 이동 추가: 원문 1↔들은 말 2(latte↔"la tay"), 2↔1, 2↔2("an iced"↔"a nice")를 이어 붙여 비교 → "비슷해요"(0.7).
+    그중 한 쌍이라도 그대로 맞으면 경계 문제가 아니라고 보고 쓰지 않음("is in"↔"is on", "latte please"↔"tea please"는 그대로 틀림).

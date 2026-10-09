@@ -74,6 +74,33 @@ void main() {
     test('자음 뼈대', () {
       expect(consonantSkeleton('latte'), 'lt');
       expect(consonantSkeleton('phone'), 'fn');
+      expect(consonantSkeleton('lighty'), 'lt'); // gh 묵음
+      expect(consonantSkeleton('ladee'), 'lt'); // t/d 같은 소리
+    });
+  });
+
+  group('단어 경계가 달라진 인식', () {
+    test('latte를 두 단어로 알아들어도 비슷해요', () {
+      final r = checkSpeech('Can I have an iced latte, please?', 'Can I have an iced la tay please');
+      expect(r.words[5].mark, WordMark.close);
+      expect(r.score, greaterThanOrEqualTo(95));
+    });
+    test('an iced ↔ a nice', () {
+      final r = checkSpeech('Can I have an iced latte, please?', 'Can I have a nice latte please');
+      expect(r.words[3].mark, isNot(WordMark.miss));
+      expect(r.words[4].mark, isNot(WordMark.miss));
+      expect(r.score, greaterThanOrEqualTo(85));
+    });
+    test('light day, lite도 latte와 비슷해요', () {
+      expect(checkSpeech('latte', 'light day').score, 70);
+      expect(checkSpeech('latte', 'lite').score, 70);
+    });
+    test('다른 말은 여전히 틀림', () {
+      final r = checkSpeech('Can I have an iced latte, please?', 'Can I have a hot tea please');
+      expect(r.words[4].mark, WordMark.miss); // iced
+      expect(r.words[5].mark, WordMark.miss); // latte
+      expect(r.score, lessThan(70));
+      expect(checkSpeech('latte', 'potato').score, 0);
     });
   });
 
