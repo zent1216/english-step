@@ -137,6 +137,26 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ---- 초기화 ----
+  /// 따라 말하기 점수만 지운다.
+  Future<void> resetSpeakScores() async {
+    speakScores = {};
+    await _prefs?.remove('speakScores');
+    notifyListeners();
+  }
+
+  /// 단어장·내 노래·진도·점수·설정을 모두 지운다(음성 인식 모델 파일은 따로).
+  Future<void> resetAll() async {
+    await _prefs?.clear();
+    vocab = [];
+    songs = [];
+    doneStories = {};
+    doneSets = {};
+    speakScores = {};
+    speechRate = 0.9;
+    notifyListeners();
+  }
+
   void setSpeechRate(double r) {
     speechRate = r;
     _prefs?.setDouble('speechRate', r);

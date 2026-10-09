@@ -2,10 +2,14 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <!-- 따라 말하기(발음 체크): 마이크로 음성 인식 -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <!-- 자동 백업 끔: 앱을 지우고 다시 깔면 예전 데이터(단어장·점수)가 되살아나지 않게 -->
     <application
         android:label="English Step"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false"
+        android:fullBackupContent="false"
+        android:dataExtractionRules="@xml/data_extraction_rules">
         <activity
             android:name=".MainActivity"
             android:exported="true"

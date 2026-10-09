@@ -20,11 +20,31 @@ class _Seg {
   int end;
 }
 
-/// 음성이 들어 있는 부분만 남겨 받아쓰기용 덩어리로 나눈다. 말소리가 없으면 빈 목록.
-List<Float32List> prepareForAsr(Float32List s, {int rate = 16000}) {
+/// 끊어 읽기용: 쉼을 기준으로 말소리 구간(대개 단어 하나~몇 개)을 각각 떼어낸다.
+/// 짧은 구간은 앞뒤에 무음을 붙여 1초 이상으로 만든다(아주 짧은 소리는 인식이 잘 안 됨).
+/// 구간이 너무 많으면(14개 초과) 빈 목록 — 그럴 땐 이어 붙인 결과만 쓴다.
+List<Float32List> wordSegments(Float32List s, {int rate = 16000}) {
+  final segs = _voiceSegments(s, rate);
+  if (segs.isEmpty || segs.length > 14) return const [];
+  if (segs.any((g) => g.end - g.start > rate * _maxChunkMs ~/ 1000)) return const [];
+  final minLen = rate; // 1초
+  return [
+    for (final g in segs)
+      () {
+        final len = g.end - g.start;
+        final padEach = len >= minLen ? rate ~/ 10 : (minLen - len) ~/ 2 + rate ~/ 10;
+        final out = Float32List(len + padEach * 2);
+        out.setRange(padEach, padEach + len, s, g.start);
+        return out;
+      }(),
+  ];
+}
+
+/// 말소리 구간(앞뒤 여유 포함). 쉼이 0.3초보다 짧으면 한 구간으로 본다.
+List<_Seg> _voiceSegments(Float32List s, int rate) {
   final frame = rate * _frameMs ~/ 1000;
   final nFrames = s.length ~/ frame;
-  if (nFrames == 0) return const [];
+  if (nFrames == 0) return [];
 
   final rms = List<double>.generate(nFrames, (f) {
     var sum = 0.0;
@@ -49,13 +69,20 @@ List<Float32List> prepareForAsr(Float32List s, {int rate = 16000}) {
       segs.add(_Seg(st, en));
     }
   }
-  if (segs.isEmpty) return const [];
+  if (segs.isEmpty) return segs;
 
   final pad = rate * _padMs ~/ 1000;
   for (final g in segs) {
     g.start = math.max(0, g.start - pad);
     g.end = math.min(s.length, g.end + pad);
   }
+  return segs;
+}
+
+/// 음성이 들어 있는 부분만 남겨 받아쓰기용 덩어리로 나눈다. 말소리가 없으면 빈 목록.
+List<Float32List> prepareForAsr(Float32List s, {int rate = 16000}) {
+  final segs = _voiceSegments(s, rate);
+  if (segs.isEmpty) return const [];
 
   // 너무 긴 구간은 강제로 자른다.
   final maxLen = rate * _maxChunkMs ~/ 1000;
@@ -94,4 +121,41 @@ List<Float32List> prepareForAsr(Float32List s, {int rate = 16000}) {
   }
   flush();
   return chunks;
+}
+
+/// 끊어 읽은 단어들을 쉼 거의 없이 바짝 붙인다(이어 말한 것처럼 들리게). 8초를 넘으면 null.
+Float32List? tightJoin(Float32List s, {int rate = 16000}) {
+  final segs = _voiceSegments(s, rate);
+  if (segs.length < 2) return null;
+  final pad = rate * _padMs ~/ 1000;
+  final keep = rate * 30 ~/ 1000; // 말소리 앞뒤로 0.03초만 남김
+  final gap = rate * 40 ~/ 1000;
+  final pieces = [
+    for (final g in segs)
+      Float32List.sublistView(s, math.min(g.end, g.start + pad - keep), math.max(g.start + pad - keep, g.end - pad + keep)),
+  ];
+  final total = pieces.fold<int>(0, (a, p) => a + p.length) + gap * (pieces.length - 1);
+  if (total > rate * _maxChunkMs ~/ 1000) return null;
+  final out = Float32List(total);
+  var o = 0;
+  for (var k = 0; k < pieces.length; k++) {
+    if (k > 0) o += gap;
+    out.setRange(o, o + pieces[k].length, pieces[k]);
+    o += pieces[k].length;
+  }
+  return out;
+}
+
+/// 단어를 하나씩 끊어 읽었는지: 말소리 구간이 3개 이상이고, 구간 사이 쉼이 대부분 0.6초 이상.
+/// (실험: Moonshine은 아주 천천히 이어 말하면 정확하지만, 단어마다 끊으면 "to"→"tear"처럼 잘못 알아듣는다.)
+bool looksWordByWord(Float32List s, {int rate = 16000}) {
+  final segs = _voiceSegments(s, rate);
+  if (segs.length < 3) return false;
+  final pad = rate * _padMs ~/ 1000;
+  var longGaps = 0;
+  for (var k = 1; k < segs.length; k++) {
+    final gap = (segs[k].start + pad) - (segs[k - 1].end - pad);
+    if (gap >= rate * 0.6) longGaps++;
+  }
+  return longGaps >= (segs.length - 1) * 0.6;
 }

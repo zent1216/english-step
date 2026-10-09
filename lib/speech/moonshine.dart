@@ -119,22 +119,38 @@ class MoonshineEngine extends ChangeNotifier {
   }
 
   /// 16kHz 모노 음성을 영어 문장으로. 짧은 문장은 폰에서 1초 안팎.
-  String transcribe(Float32List samples) {
-    final rec = _load();
-    // 앞뒤 무음 자르기 + 긴 쉼 줄이기 + 8초 넘으면 나눠서 받아쓴다(audio_prep.dart).
-    final parts = <String>[];
-    for (final chunk in prepareForAsr(samples, rate: sampleRate)) {
-      final stream = rec.createStream();
-      try {
-        stream.acceptWaveform(samples: chunk, sampleRate: sampleRate);
-        rec.decode(stream);
-        final t = rec.getResult(stream).text.trim();
-        if (t.isNotEmpty) parts.add(t);
-      } finally {
-        stream.free();
-      }
+  String _decode(so.OfflineRecognizer rec, Float32List chunk) {
+    final stream = rec.createStream();
+    try {
+      stream.acceptWaveform(samples: chunk, sampleRate: sampleRate);
+      rec.decode(stream);
+      return rec.getResult(stream).text.trim();
+    } finally {
+      stream.free();
     }
-    return parts.join(' ');
+  }
+
+  /// 받아쓰기 후보 여러 개. 화면에서 원문과 가장 잘 맞는 것으로 채점한다.
+  /// 1) 녹음 그대로(9초 이하일 때)
+  /// 2) 앞뒤 무음 자르고 긴 쉼을 줄여 이어 붙인 것(8초 넘으면 나눠서)
+  /// 3) 끊어 읽기용: 쉼마다 떼어 구간별로 따로 받아쓴 뒤 이어 붙인 것
+  ///    — 단어를 하나씩 끊어 말하면 앞뒤 흐름이 없어져 1·2가 단어를 잘못 알아듣기 쉽다.
+  /// 4) 끊어 읽은 단어들을 바짝 붙인 것(이어 말한 것처럼)
+  List<String> transcribeCandidates(Float32List samples) {
+    final rec = _load();
+    final out = <String>[];
+    void add(String t) {
+      t = t.trim();
+      if (t.isNotEmpty && !out.contains(t)) out.add(t);
+    }
+
+    if (samples.length <= sampleRate * 9) add(_decode(rec, samples));
+    add(prepareForAsr(samples, rate: sampleRate).map((c) => _decode(rec, c)).join(' '));
+    final tight = tightJoin(samples, rate: sampleRate);
+    if (tight != null) add(_decode(rec, tight));
+    final words = wordSegments(samples, rate: sampleRate);
+    if (words.length >= 2) add(words.map((c) => _decode(rec, c)).join(' '));
+    return out;
   }
 
   /// 내 목소리 다시 듣기용 WAV 저장.
@@ -147,6 +163,7 @@ class MoonshineEngine extends ChangeNotifier {
 
   /// 모델 지우기(용량 확보).
   Future<void> deleteModel() async {
+    await init();
     _recognizer?.free();
     _recognizer = null;
     final dir = Directory(_modelDir);

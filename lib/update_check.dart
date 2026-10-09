@@ -12,6 +12,9 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'app_state.dart';
+import 'speech/moonshine.dart';
+
 const _repo = 'zent1216/english-step';
 const releasesPageUrl = 'https://github.com/$_repo/releases';
 const apkDownloadUrl = 'https://github.com/$_repo/releases/latest/download/english_step.apk';
@@ -207,6 +210,33 @@ class _AppInfoSheetState extends State<_AppInfoSheet> {
                 }
               },
             ),
+            const SizedBox(height: 16),
+            Text('데이터 관리', style: text.titleSmall),
+            const SizedBox(height: 4),
+            Text('이 폰 안에만 저장돼요. 앱을 지우면 함께 지워져요.',
+                style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
+            const SizedBox(height: 8),
+            _ResetTile(
+              icon: Icons.mic_off_rounded,
+              title: '말하기 점수 초기화',
+              detail: '문장별 최고 점수와 초록 체크를 지워요.',
+              confirm: '말하기 점수를 모두 지울까요?',
+              action: () => AppState.instance.resetSpeakScores(),
+            ),
+            _ResetTile(
+              icon: Icons.restart_alt_rounded,
+              title: '학습 기록 전체 초기화',
+              detail: '단어장, 내 노래, 진도, 점수, 설정을 모두 지워요.',
+              confirm: '단어장·내 노래·진도·점수를 모두 지울까요? 되돌릴 수 없어요.',
+              action: () => AppState.instance.resetAll(),
+            ),
+            _ResetTile(
+              icon: Icons.download_for_offline_rounded,
+              title: '음성 인식 모델 다시 받기',
+              detail: '받아둔 Moonshine 모델(약 140MB)을 지워요. 따라 말하기에서 다시 받을 수 있어요.',
+              confirm: '음성 인식 모델을 지울까요?',
+              action: () => MoonshineEngine.instance.deleteModel(),
+            ),
             const SizedBox(height: 4),
             TextButton(
               onPressed: () => openExternal(privacyUrl),
@@ -215,6 +245,54 @@ class _AppInfoSheetState extends State<_AppInfoSheet> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ResetTile extends StatelessWidget {
+  const _ResetTile({
+    required this.icon,
+    required this.title,
+    required this.detail,
+    required this.confirm,
+    required this.action,
+  });
+  final IconData icon;
+  final String title;
+  final String detail;
+  final String confirm;
+  final Future<void> Function() action;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+      leading: Icon(icon, color: scheme.error),
+      title: Text(title),
+      subtitle: Text(detail),
+      onTap: () async {
+        final ok = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text(title),
+            content: Text(confirm),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('취소')),
+              FilledButton(
+                style: FilledButton.styleFrom(backgroundColor: scheme.error, foregroundColor: scheme.onError),
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('지우기'),
+              ),
+            ],
+          ),
+        );
+        if (ok != true) return;
+        await action();
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$title 완료')));
+        }
+      },
     );
   }
 }

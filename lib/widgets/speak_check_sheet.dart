@@ -9,14 +9,21 @@ import 'package:speech_to_text/speech_to_text.dart';
 import '../app_state.dart';
 import '../models.dart';
 import '../pronunciation.dart';
+import '../speech/audio_prep.dart';
 import '../speech/moonshine.dart';
 import '../speech/recorder.dart';
 import '../theme.dart';
+import 'word_practice_sheet.dart';
 
 /// 말하기(따라 말하기) 버튼. 듣기 버튼 옆에 짝으로 둔다. 누르면 [showSpeakCheckSheet]가 열린다.
 class SpeakCheckButton extends StatelessWidget {
-  const SpeakCheckButton(this.target,
-      {super.key, this.ko = '', this.quiz = false, this.onBeforeOpen});
+  const SpeakCheckButton(
+    this.target, {
+    super.key,
+    this.ko = '',
+    this.quiz = false,
+    this.onBeforeOpen,
+  });
   final String target;
   final String ko;
 
@@ -96,24 +103,22 @@ class ListenSpeakButtons extends StatelessWidget {
 
 /// 따라 말하기 시트를 연다. [quiz]면 영어 정답을 숨기고 한국어 뜻만 보여준 채 말하게 한다.
 /// 시트가 닫히면 이번에 받은 최고 점수(0~100, 한 번도 안 했으면 null)를 돌려준다.
-Future<int?> showSpeakCheckSheet(BuildContext context, String target,
-    {String ko = '', bool quiz = false}) async {
+Future<int?> showSpeakCheckSheet(
+  BuildContext context,
+  String target, {
+  String ko = '',
+  bool quiz = false,
+}) async {
   Speaker.instance.stop();
   int? best;
   await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
-    builder: (_) => _SpeakCheckSheet(
-      target: target,
-      ko: ko,
-      quiz: quiz,
-      onBest: (v) => best = v,
-    ),
+    builder: (_) => _SpeakCheckSheet(target: target, ko: ko, quiz: quiz, onBest: (v) => best = v),
   );
   return best;
 }
-
 
 // 예비 엔진(폰 기본 음성 인식). Moonshine 모델을 받기 전에만 쓴다.
 final _stt = SpeechToText();
@@ -148,6 +153,7 @@ class _SpeakCheckSheetState extends State<_SpeakCheckSheet> {
   int? _best; // 이 문장의 역대 최고 점수(저장된 값 포함)
   int? _sessionBest; // 이번에 연 시트에서의 최고 점수(단어장 '말해서 답하기' 판정용)
   String? _takePath; // 내 목소리 다시 듣기
+  bool _wordByWord = false; // 단어마다 끊어 읽었는지(안내용)
 
   @override
   void initState() {
@@ -184,6 +190,7 @@ class _SpeakCheckSheetState extends State<_SpeakCheckSheet> {
       _result = null;
       _heard = '';
       _takePath = null;
+      _wordByWord = false;
     });
     if (_useMoonshine) {
       await _startMoonshine();
@@ -236,12 +243,24 @@ class _SpeakCheckSheetState extends State<_SpeakCheckSheet> {
     // 스피너가 먼저 그려지도록 한 프레임 쉰다(받아쓰기는 잠깐 화면을 붙잡는다).
     await Future<void>.delayed(const Duration(milliseconds: 60));
     try {
-      final text = _engine.transcribe(samples);
+      // 받아쓰기 후보 중 원문과 가장 잘 맞는 것으로 채점(끊어 읽어도 제대로 잡히게).
+      final candidates = _engine.transcribeCandidates(samples);
+      var text = candidates.isEmpty ? '' : candidates.first;
+      var bestScore = -1;
+      for (final c in candidates) {
+        final sc = checkSpeech(widget.target, c).score;
+        if (sc > bestScore) {
+          bestScore = sc;
+          text = c;
+        }
+      }
       _takePath = _engine.saveWave(samples);
+      final wordByWord = looksWordByWord(samples, rate: MoonshineEngine.sampleRate);
       if (!mounted) return;
       setState(() {
         _decoding = false;
         _heard = text;
+        _wordByWord = wordByWord;
       });
       _finish(text);
     } catch (e) {
@@ -259,8 +278,11 @@ class _SpeakCheckSheetState extends State<_SpeakCheckSheet> {
     final ok = await _stt.initialize(onError: _onError, onStatus: _onStatus);
     if (!mounted) return;
     if (!ok) {
-      setState(() => _error = '음성 인식을 쓸 수 없어요. 마이크 권한을 허용했는지 확인하거나, '
-          '위의 정확한 음성 인식을 받아주세요.');
+      setState(
+        () => _error =
+            '음성 인식을 쓸 수 없어요. 마이크 권한을 허용했는지 확인하거나, '
+            '위의 정확한 음성 인식을 받아주세요.',
+      );
       return;
     }
     setState(() => _listening = true);
@@ -319,6 +341,17 @@ class _SpeakCheckSheetState extends State<_SpeakCheckSheet> {
     }
   }
 
+  /// 빨간·주황 단어는 눌러서 단어 연습 시트를 연다.
+  Widget _tappable(WordCheck w, Widget child) {
+    if (!w.counted || w.ok || _listening || _decoding) return child;
+    return InkWell(
+      borderRadius: BorderRadius.circular(6),
+      onTap: () =>
+          showWordPracticeSheet(context, w.word, sentence: widget.target, sentenceKo: widget.ko),
+      child: child,
+    );
+  }
+
   // ---- 화면 ----
   @override
   Widget build(BuildContext context) {
@@ -336,8 +369,10 @@ class _SpeakCheckSheetState extends State<_SpeakCheckSheet> {
             Row(
               children: [
                 Expanded(
-                  child: Text(widget.quiz ? '영어로 말해보세요' : '따라 말하기',
-                      style: text.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                  child: Text(
+                    widget.quiz ? '영어로 말해보세요' : '따라 말하기',
+                    style: text.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                  ),
                 ),
                 _EngineChip(moonshine: _useMoonshine),
               ],
@@ -349,10 +384,7 @@ class _SpeakCheckSheetState extends State<_SpeakCheckSheet> {
                   : '듣고 → 마이크를 누르고 따라 말해보세요. 천천히 말해도 괜찮아요.',
               style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
             ),
-            if (!_useMoonshine) ...[
-              const SizedBox(height: 14),
-              _ModelCard(engine: _engine),
-            ],
+            if (!_useMoonshine) ...[const SizedBox(height: 14), _ModelCard(engine: _engine)],
             const SizedBox(height: 18),
             // 문장(결과가 나오면 단어별 색칠)
             Container(
@@ -374,28 +406,49 @@ class _SpeakCheckSheetState extends State<_SpeakCheckSheet> {
                       runSpacing: 2,
                       children: [
                         for (final w in r.words)
-                          Text(
-                            w.word,
-                            style: englishStyle(context, size: 22).copyWith(
-                              color: !w.counted
-                                  ? null
-                                  : switch (w.mark) {
-                                      WordMark.ok => good,
-                                      WordMark.close => _closeColor,
-                                      WordMark.miss => scheme.error,
-                                    },
-                              fontWeight: w.counted && !w.ok ? FontWeight.w700 : null,
-                              decoration: w.counted && w.mark == WordMark.miss
-                                  ? TextDecoration.underline
-                                  : null,
-                              decorationColor: scheme.error,
+                          _tappable(
+                            w,
+                            Text(
+                              w.word,
+                              style: englishStyle(context, size: 22).copyWith(
+                                color: !w.counted
+                                    ? null
+                                    : switch (w.mark) {
+                                        WordMark.ok => good,
+                                        WordMark.close => _closeColor,
+                                        WordMark.miss => scheme.error,
+                                      },
+                                fontWeight: w.counted && !w.ok ? FontWeight.w700 : null,
+                                decoration: w.counted && w.mark == WordMark.miss
+                                    ? TextDecoration.underline
+                                    : null,
+                                decorationColor: scheme.error,
+                              ),
                             ),
                           ),
                       ],
                     ),
+                  if (r != null && r.words.any((w) => w.counted && !w.ok)) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(Icons.touch_app_rounded, size: 16, color: scheme.tertiary),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            '틀린 단어를 누르면 따로 발음 연습하고 단어장에 담을 수 있어요',
+                            style: text.bodySmall?.copyWith(color: scheme.tertiary),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                   if (widget.ko.isNotEmpty && !(widget.quiz && r == null)) ...[
                     const SizedBox(height: 6),
-                    Text(widget.ko, style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant)),
+                    Text(
+                      widget.ko,
+                      style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+                    ),
                   ],
                 ],
               ),
@@ -412,17 +465,38 @@ class _SpeakCheckSheetState extends State<_SpeakCheckSheet> {
                     _decoding
                         ? '받아쓰는 중…'
                         : _listening
-                            ? '듣는 중… 말을 마치고 2초쯤 지나면 자동으로 멈춰요'
-                            : (_heard.isEmpty ? '아직 말하지 않았어요' : '“$_heard”'),
-                    style: englishStyle(context, size: 16)
-                        .copyWith(color: scheme.onSurfaceVariant),
+                        ? '듣는 중… 말을 마치고 2초쯤 지나면 자동으로 멈춰요'
+                        : (_heard.isEmpty ? '아직 말하지 않았어요' : '“$_heard”'),
+                    style: englishStyle(context, size: 16).copyWith(color: scheme.onSurfaceVariant),
                   ),
                 ),
               ],
             ),
-            if (r != null) ...[
-              const SizedBox(height: 16),
-              _ScoreRow(result: r, best: _best),
+            if (r != null) ...[const SizedBox(height: 16), _ScoreRow(result: r, best: _best)],
+            if (r != null && _wordByWord && r.score < 85) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: scheme.primaryContainer.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.tips_and_updates_rounded, color: scheme.primary, size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        '단어를 하나씩 끊어 읽었어요. 음성 인식은 문장 흐름으로 단어를 알아들어서, '
+                        '끊어 읽으면 제대로 발음해도 틀리게 나오기 쉬워요. '
+                        '느려도 괜찮으니 끊지 말고 이어서 말해보세요.',
+                        style: text.bodyMedium,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
             if (_error != null) ...[
               const SizedBox(height: 12),
@@ -454,8 +528,10 @@ class _SpeakCheckSheetState extends State<_SpeakCheckSheet> {
                     label: const Text('원어민 듣기'),
                     onPressed: _listening || _decoding || (widget.quiz && r == null)
                         ? null
-                        : () => Speaker.instance
-                            .speak(widget.target, rate: AppState.instance.speechRate),
+                        : () => Speaker.instance.speak(
+                            widget.target,
+                            rate: AppState.instance.speechRate,
+                          ),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -521,8 +597,7 @@ class _ModelCard extends StatelessWidget {
         body = Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('정확한 음성 인식 받는 중… ${(engine.progress * 100).round()}%',
-                style: text.titleSmall),
+            Text('정확한 음성 인식 받는 중… ${(engine.progress * 100).round()}%', style: text.titleSmall),
             const SizedBox(height: 8),
             LinearProgressIndicator(value: engine.progress, borderRadius: BorderRadius.circular(4)),
             const SizedBox(height: 6),
@@ -554,7 +629,8 @@ class _ModelCard extends StatelessWidget {
                         '폰 안에서 도는 AI 음성 인식이에요. 한 번만 받으면 인터넷 없이 써요. '
                             '약 ${MoonshineEngine.approxMb}MB · Wi-Fi 권장',
                     style: text.bodySmall?.copyWith(
-                        color: engine.error != null ? scheme.error : scheme.onSurfaceVariant),
+                      color: engine.error != null ? scheme.error : scheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),
@@ -604,8 +680,10 @@ class _ScoreRow extends StatelessWidget {
                 backgroundColor: scheme.surfaceContainerHighest,
                 strokeCap: StrokeCap.round,
               ),
-              Text('${result.score}',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: color)),
+              Text(
+                '${result.score}',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: color),
+              ),
             ],
           ),
         ),
@@ -616,8 +694,10 @@ class _ScoreRow extends StatelessWidget {
             children: [
               Text(result.message, style: Theme.of(context).textTheme.bodyLarge),
               if (best != null)
-                Text(best == 100 ? '이 문장 100점 달성!' : '이 문장 최고 기록 $best점',
-                    style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
+                Text(
+                  best == 100 ? '이 문장 100점 달성!' : '이 문장 최고 기록 $best점',
+                  style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                ),
             ],
           ),
         ),
@@ -669,11 +749,13 @@ class _MicButton extends StatelessWidget {
                 child: busy
                     ? Padding(
                         padding: const EdgeInsets.all(24),
-                        child: CircularProgressIndicator(
-                            strokeWidth: 3, color: scheme.onPrimary),
+                        child: CircularProgressIndicator(strokeWidth: 3, color: scheme.onPrimary),
                       )
-                    : Icon(listening ? Icons.stop_rounded : Icons.mic_rounded,
-                        size: 36, color: listening ? scheme.onError : scheme.onPrimary),
+                    : Icon(
+                        listening ? Icons.stop_rounded : Icons.mic_rounded,
+                        size: 36,
+                        color: listening ? scheme.onError : scheme.onPrimary,
+                      ),
               ),
             ),
           ),

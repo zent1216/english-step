@@ -63,6 +63,20 @@ void main() {
     });
   });
 
+  group('단어 하나 연습', () {
+    test('모음만 헷갈린 경우(meet→mate, home→hum)는 비슷해요', () {
+      expect(checkSpeech('meet', 'mate').words.single.mark, WordMark.close);
+      expect(checkSpeech('home', 'hum').score, 70);
+    });
+    test('자음이 다르면 틀림', () {
+      expect(checkSpeech('meet', 'need').words.single.mark, WordMark.miss);
+    });
+    test('자음 뼈대', () {
+      expect(consonantSkeleton('latte'), 'lt');
+      expect(consonantSkeleton('phone'), 'fn');
+    });
+  });
+
   group('받아쓰기 전 소리 다듬기', () {
     const rate = 16000;
     Float32List build(List<(double seconds, bool voice)> parts) {

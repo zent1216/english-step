@@ -1,5 +1,7 @@
 import 'package:english_step/app_state.dart';
 import 'package:english_step/main.dart';
+import 'package:english_step/theme.dart';
+import 'package:english_step/widgets/word_practice_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -95,5 +97,29 @@ void main() {
     await tester.tap(find.byIcon(Icons.music_note_outlined));
     await tester.pumpAndSettle();
     expect(find.textContaining('Paper Boats'), findsOneWidget);
+  });
+
+  testWidgets('단어 연습 시트: 단어·예문 강조·3번 점·단어장에 담기', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      theme: buildTheme(Brightness.light),
+      home: Scaffold(
+        body: Builder(
+          builder: (context) => TextButton(
+            onPressed: () => showWordPracticeSheet(context, 'home.',
+                sentence: 'I walk home.', sentenceKo: '나는 집에 걸어간다.'),
+            child: const Text('열기'),
+          ),
+        ),
+      ),
+    ));
+    await tester.tap(find.text('열기'));
+    await tester.pumpAndSettle(const Duration(seconds: 1));
+    expect(find.text('home'), findsOneWidget); // 문장부호 뗀 큰 단어
+    expect(find.text('3번 따라 말하기'), findsOneWidget);
+
+    await tester.tap(find.text('단어장에 담기'));
+    await tester.pumpAndSettle();
+    expect(AppState.instance.hasWord('home'), isTrue);
+    expect(find.text('담았어요'), findsOneWidget);
   });
 }

@@ -154,12 +154,22 @@ int _editDistance(String a, String b) {
   return prev[b.length];
 }
 
+/// 자음 뼈대: 모음과 겹친 글자를 빼고 비슷한 소리를 하나로(c/k/q→k, ph→f, ck→k).
+/// 단어 하나만 말하면 음성 인식이 모음을 잘 헷갈려서(meet→mate, home→hum) 뼈대가 같으면 "비슷해요"로 본다.
+String consonantSkeleton(String w) {
+  var x = w.toLowerCase().replaceAll('ph', 'f').replaceAll('ck', 'k').replaceAll(RegExp('[cq]'), 'k');
+  x = x.replaceAll(RegExp('[aeiouyhw]'), '');
+  return x.replaceAllMapped(RegExp(r'(.)\1+'), (m) => m.group(1)!);
+}
+
 /// 두 단어가 얼마나 맞는지: 1 = 같음, 0.7 = 비슷함, 0 = 다름.
 double wordMatch(String target, String heard) {
   if (target.isEmpty || heard.isEmpty) return 0;
   if (target == heard || _canon(target) == _canon(heard)) return 1;
   final longer = target.length > heard.length ? target.length : heard.length;
   if (longer < 3) return 0; // a/an, in/on 같은 짧은 단어는 정확해야 한다
+  final sk = consonantSkeleton(target);
+  if (target.length >= 3 && sk.isNotEmpty && sk == consonantSkeleton(heard)) return 0.7;
   final sim = 1 - _editDistance(target, heard) / longer;
   return sim >= 0.7 ? 0.7 : 0;
 }
