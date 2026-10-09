@@ -6,6 +6,7 @@ import 'screens/story_list_screen.dart';
 import 'screens/vocab_screen.dart';
 import 'speech/moonshine.dart';
 import 'theme.dart';
+import 'update_check.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -39,6 +40,13 @@ class HomeShell extends StatefulWidget {
 
 class _HomeShellState extends State<HomeShell> {
   int _tab = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // 첫 화면이 뜬 뒤 새 버전이 있는지 한 번 확인한다.
+    WidgetsBinding.instance.addPostFrameCallback((_) => autoCheckForUpdate(context));
+  }
 
   @override
   Widget build(BuildContext context) {

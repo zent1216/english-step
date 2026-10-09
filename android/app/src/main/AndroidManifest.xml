@@ -48,6 +48,11 @@
         <intent>
             <action android:name="android.intent.action.TTS_SERVICE"/>
         </intent>
+        <!-- url_launcher: 업데이트·릴리스 페이지를 브라우저로 열기(안드로이드 11+) -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
+        </intent>
         <!-- speech_to_text: 안드로이드 11+에서 기기 음성 인식 서비스를 찾으려면 필요 -->
         <intent>
             <action android:name="android.speech.RecognitionService"/>

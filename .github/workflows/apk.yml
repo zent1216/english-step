@@ -50,7 +50,8 @@ jobs:
         run: echo "BUILD_NUMBER=$(( ${{ github.run_number }} + BUILD_OFFSET ))" >> "$GITHUB_ENV"
 
       # 요즘 폰(arm64)용만 빌드한다(구형 32비트폰 미지원).
-      - run: flutter build apk --release --target-platform android-arm64 --build-number=$BUILD_NUMBER
+      # BUILD_NUMBER는 앱 안 '새 버전 알림'이 지금 빌드 번호를 알도록 넣는다(lib/update_check.dart).
+      - run: flutter build apk --release --target-platform android-arm64 --build-number=$BUILD_NUMBER --dart-define=BUILD_NUMBER=$BUILD_NUMBER
 
       - name: Play 업로드용 AAB 빌드
         if: env.HAS_UPLOAD_KEY == 'true'
@@ -60,7 +61,7 @@ jobs:
           UPLOAD_KEYSTORE_PATH: ${{ runner.temp }}/upload.jks
         run: |
           echo "$UPLOAD_KEYSTORE_BASE64" | base64 -d > "$UPLOAD_KEYSTORE_PATH"
-          flutter build appbundle --release --android-project-arg=playUpload=true --build-number=$BUILD_NUMBER
+          flutter build appbundle --release --android-project-arg=playUpload=true --build-number=$BUILD_NUMBER --dart-define=BUILD_NUMBER=$BUILD_NUMBER
           rm -f "$UPLOAD_KEYSTORE_PATH"
           cp build/app/outputs/bundle/release/app-release.aab english_step.aab
 

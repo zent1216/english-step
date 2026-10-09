@@ -189,3 +189,13 @@
 - 마이크 사용 앱이라 Play Console의 데이터 보안 양식에 "오디오: 수집 안 함(기기 내 처리)"로 답한다.
 - 첫 AAB는 Play Console에서 손으로 올려야 한다(Google 정책). 그 뒤 자동 업로드를 원하면 서비스 계정 JSON을 Secrets에 넣고
   업로드 단계를 추가할 것(아직 안 함).
+
+## 새 버전 알림 (2026-10-09 추가)
+- `lib/update_check.dart`: 앱 시작 때(첫 화면 뜬 뒤 1회) GitHub API `repos/zent1216/english-step/releases/latest`(키 없음)를
+  읽어 릴리스 제목 "영어 한 걸음 (빌드 N)"의 N이 지금 빌드보다 크면 알림 창(업데이트 = APK 고정 링크 열기 / 릴리스 페이지 / 나중에).
+  "나중에"를 누른 빌드는 다시 자동으로 묻지 않는다(SharedPreferences `skippedUpdateBuild`). 오프라인이면 조용히 넘어감.
+- 지금 빌드 번호는 Actions가 `--dart-define=BUILD_NUMBER=N`으로 넣는다. PC에서 그냥 빌드하면 0 → 자동 확인 안 함(개발용 빌드).
+  **릴리스 제목 형식("빌드 N")을 바꾸면 알림이 깨지니 같이 고칠 것.**
+- 첫 화면 오른쪽 위 ⓘ → 앱 정보 시트: 빌드 번호, 업데이트 확인, 릴리스 페이지, 친구용 다운로드 링크 복사, 개인정보처리방침.
+- 링크 열기는 `url_launcher: 6.3.3`(원래 유튜브 패키지가 쓰던 버전을 직접 의존성으로), AndroidManifest `<queries>`에 https VIEW 추가.
+- 빌드 11·12(이 기능 전 APK)는 빌드 번호가 0으로 들어가 알림을 못 받는다. 한 번은 링크로 직접 받아 설치해야 한다.

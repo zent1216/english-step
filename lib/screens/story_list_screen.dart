@@ -4,6 +4,7 @@ import '../app_state.dart';
 import '../content.dart';
 import '../models.dart';
 import '../theme.dart';
+import '../update_check.dart';
 import '../widgets/marked_text.dart';
 import 'sentence_screens.dart';
 import 'story_reader_screen.dart';
@@ -43,6 +44,12 @@ class StoryListScreen extends StatelessWidget {
                       tooltip: '듣기 속도',
                       icon: const Icon(Icons.speed_rounded),
                       onPressed: () => showSpeechRateSheet(context),
+                    ),
+                    const SizedBox(width: 4),
+                    IconButton.filledTonal(
+                      tooltip: '앱 정보·업데이트',
+                      icon: const Icon(Icons.info_outline_rounded),
+                      onPressed: () => showAppInfoSheet(context),
                     ),
                   ],
                 ),
