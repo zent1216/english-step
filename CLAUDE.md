@@ -69,10 +69,14 @@
   - 오늘 복습할 개수를 보여준다.
 - 전체 목록에서 듣기와 삭제를 할 수 있다.
 
-## 디자인 방향 (프로토타입 기준)
-- 차분한 청회색 바탕에 잉크 블루 강조색, 학습 포인트는 **형광펜 노랑**.
-- 영어 본문은 **Literata**(전자책용 세리프), 한국어 UI는 **Pretendard**, 시간·숫자는 고정폭. 두 글꼴 모두 `assets/fonts`에 포함(SIL OFL, 라이선스 파일 동봉). Literata는 라틴 글자만 있어 한글은 Pretendard로 대체 표시.
-- 라이트/다크 모드를 둘 다 지원한다. 현재 재생 중인 줄은 연한 노랑으로 강조한다.
+## 디자인 방향 (2026-10-09 개편)
+- 밝은 회색 바탕(#F4F5F8) + 흰 카드(둥근 20, 얇은 테두리) + 선명한 블루(#3E5BF2) 강조, **말하기는 코랄(#F2643E, tertiary)**,
+  학습 포인트는 형광펜 노랑. 다크 모드도 같은 구조. 색·버튼·카드·하단탭·시트 스타일은 전부 `lib/theme.dart`에 모음
+  (`AppColors` 확장: good=맞은 단어 초록, subtleBorder).
+- 글꼴은 **전부 Pretendard**(한글 + Inter 기반 영문, Regular/Medium/SemiBold/Bold, SIL OFL). Literata(세리프)는
+  "구닥다리 같다"는 피드백으로 제거. `englishFont`/`monoFont`도 Pretendard를 가리킨다(고정폭 글꼴은 기기마다 달라 안 씀).
+- 홈: 큰 인사말 + 진도 요약 3칸 + 그라데이션 Lv.0 카드 + 레벨별 색 배지 이야기 카드.
+- 화면 확인은 flutter test 골든 캡처로 했다(Pretendard·MaterialIcons를 FontLoader로 불러와 PNG로 찍음, 저장소엔 안 넣음).
 
 ## 코드 구조와 진행 상태
 
@@ -151,3 +155,19 @@
 - 권한: AndroidManifest에 `RECORD_AUDIO` + `<queries>`의 `android.speech.RecognitionService`. 권한 요청은 플러그인이 첫 사용 때 한다.
 - 나중에: 내 목소리 녹음해서 원어민 음성과 번갈아 듣기(음성 인식과 동시에 마이크를 못 써서 별도 구현 필요).
 - 클라우드 세션에서도 Flutter를 3.41.4로 맞춰 작업했다(pubspec.lock이 PC/Actions와 어긋나지 않게).
+
+## 음성 인식 엔진: Moonshine (2026-10-09 교체)
+- 폰 기본 음성 인식이 들쭉날쭉해서 **Moonshine v2 base(영어)**를 `sherpa_onnx: 1.13.8`로 폰 안에서 돌린다(오프라인, 무료).
+  모델: sherpa-onnx 공식 배포 `asr-models/sherpa-onnx-moonshine-base-en-quantized-2026-02-27.tar.bz2`
+  (받기 111MB → 풀면 encoder_model.ort 31MB + decoder_model_merged.ort 109MB + tokens.txt). 앱에 넣지 않고
+  따라 말하기 시트의 "받기" 카드로 처음 한 번 받아 앱 전용 폴더(`getApplicationSupportDirectory()/asr`)에 푼다
+  (압축 풀기는 `Isolate.run` + `archive` 패키지, 폰에서 수십 초). tiny(30MB)도 있지만 정확도 때문에 base 선택.
+- 클라우드 리눅스에서 검증: 3.8초 음성 받아쓰기 0.16초, 모델 로딩 1.5초, 정확히 인식.
+- 코드: `lib/speech/moonshine.dart`(받기/풀기/인식/WAV 저장, `MoonshineEngine` 싱글톤, main에서 `init()`),
+  `lib/speech/recorder.dart`(`record` 패키지로 16kHz PCM 녹음, 말 끝나고 1.3초 조용하면 자동 정지, 최대 9초 —
+  Moonshine v2가 10초 이상 음성에서 문제가 있었던 이력 때문).
+- 모델을 받기 전/실패 시에는 기존 `speech_to_text`(폰 기본 인식)로 대신한다(시트 오른쪽 위 칩: Moonshine / 기본 인식).
+- 녹음한 내 목소리를 `audioplayers`로 다시 듣기("내 목소리" 버튼).
+- 패키지(Flutter 3.41 호환으로 고정): sherpa_onnx 1.13.8, record 6.2.1, audioplayers 6.7.1, path_provider 2.1.6, archive 4.0.9.
+- 받아쓰기(decode)는 메인 isolate에서 돌아 짧게 화면이 멈출 수 있다(문장 길이 기준 1초 안팎 예상, 실기기 미측정).
+

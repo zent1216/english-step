@@ -23,10 +23,27 @@ class VocabScreen extends StatelessWidget {
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(32),
-                child: Text(
-                  '아직 담은 표현이 없어요.\n이야기나 가사에서 노란 표현을 누르고\n"단어장에 담기"를 해보세요.',
-                  textAlign: TextAlign.center,
-                  style: text.bodyLarge?.copyWith(color: scheme.onSurfaceVariant),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 72,
+                      height: 72,
+                      decoration: BoxDecoration(
+                        color: scheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(22),
+                      ),
+                      child: Icon(Icons.bookmark_add_rounded, size: 34, color: scheme.primary),
+                    ),
+                    const SizedBox(height: 16),
+                    Text('아직 담은 표현이 없어요', style: text.titleMedium),
+                    const SizedBox(height: 6),
+                    Text(
+                      '이야기나 가사에서 노란 표현을 누르고\n"단어장에 담기"를 해보세요.',
+                      textAlign: TextAlign.center,
+                      style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+                    ),
+                  ],
                 ),
               ),
             );

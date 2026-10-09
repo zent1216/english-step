@@ -41,6 +41,11 @@ dependencies:
   youtube_explode_dart: 3.1.0
   google_mlkit_translation: 0.14.0
   speech_to_text: 7.4.0
+  sherpa_onnx: 1.13.8
+  record: 6.2.1
+  audioplayers: 6.7.1
+  path_provider: 2.1.6
+  archive: 4.0.9
 
 dev_dependencies:
   flutter_test:
@@ -74,15 +79,10 @@ flutter:
         - asset: assets/fonts/Pretendard-Regular.otf
         - asset: assets/fonts/Pretendard-Medium.otf
           weight: 500
+        - asset: assets/fonts/Pretendard-SemiBold.otf
+          weight: 600
         - asset: assets/fonts/Pretendard-Bold.otf
           weight: 700
-    - family: Literata
-      fonts:
-        - asset: assets/fonts/Literata-400.ttf
-        - asset: assets/fonts/Literata-400-italic.ttf
-          style: italic
-        - asset: assets/fonts/Literata-600.ttf
-          weight: 600
 
   # To add assets to your application, add an assets section, like this:
   # assets:

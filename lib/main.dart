@@ -4,11 +4,13 @@ import 'app_state.dart';
 import 'screens/song_list_screen.dart';
 import 'screens/story_list_screen.dart';
 import 'screens/vocab_screen.dart';
+import 'speech/moonshine.dart';
 import 'theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AppState.instance.load();
+  MoonshineEngine.instance.init(); // 음성 인식 모델이 받아져 있는지 확인(기다리지 않음)
   runApp(const EnglishStepApp());
 }
 
