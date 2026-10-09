@@ -14,6 +14,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'app_state.dart';
 import 'speech/moonshine.dart';
+import 'speech/pron_scorer.dart';
 
 const _repo = 'zent1216/english-step';
 const releasesPageUrl = 'https://github.com/$_repo/releases';
@@ -257,9 +258,12 @@ class _AppInfoSheetState extends State<_AppInfoSheet> {
             _ResetTile(
               icon: Icons.download_for_offline_rounded,
               title: '음성 인식 모델 다시 받기',
-              detail: '받아둔 Moonshine 모델(약 140MB)을 지워요. 따라 말하기에서 다시 받을 수 있어요.',
+              detail: '받아둔 Moonshine·발음 채점 모델(약 190MB)을 지워요. 따라 말하기에서 다시 받을 수 있어요.',
               confirm: '음성 인식 모델을 지울까요?',
-              action: () => MoonshineEngine.instance.deleteModel(),
+              action: () async {
+                await MoonshineEngine.instance.deleteModel();
+                await PronScorer.instance.deleteModel();
+              },
             ),
             const SizedBox(height: 4),
             TextButton(

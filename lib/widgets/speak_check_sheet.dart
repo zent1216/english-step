@@ -11,6 +11,7 @@ import '../models.dart';
 import '../pronunciation.dart';
 import '../speech/audio_prep.dart';
 import '../speech/moonshine.dart';
+import '../speech/pron_scorer.dart';
 import '../speech/recorder.dart';
 import '../theme.dart';
 import 'word_practice_sheet.dart';
@@ -161,6 +162,8 @@ class _SpeakCheckSheetState extends State<_SpeakCheckSheet> {
     super.initState();
     _engine.addListener(_onEngine);
     _engine.init();
+    PronScorer.instance.addListener(_onEngine);
+    PronScorer.instance.init();
     _best = AppState.instance.speakScore(widget.target);
     _recorder.onLevel = (v) {
       if (mounted && _listening) setState(() => _level = v);
@@ -170,6 +173,7 @@ class _SpeakCheckSheetState extends State<_SpeakCheckSheet> {
   @override
   void dispose() {
     _engine.removeListener(_onEngine);
+    PronScorer.instance.removeListener(_onEngine);
     _recorder.cancel();
     _recorder.dispose();
     _player.dispose();
@@ -256,6 +260,8 @@ class _SpeakCheckSheetState extends State<_SpeakCheckSheet> {
         }
       }
       _takePath = _engine.saveWave(samples);
+      // 발음 채점: 받아쓰기가 틀려도 소리가 정답 단어와 맞으면 인정(모델이 있을 때만)
+      final gops = PronScorer.instance.score(samples, widget.target);
       final wordByWord = looksWordByWord(samples, rate: MoonshineEngine.sampleRate);
       if (!mounted) return;
       setState(() {
@@ -263,7 +269,7 @@ class _SpeakCheckSheetState extends State<_SpeakCheckSheet> {
         _heard = text;
         _wordByWord = wordByWord;
       });
-      _finish(text);
+      _finish(text, gops: gops);
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -328,8 +334,8 @@ class _SpeakCheckSheetState extends State<_SpeakCheckSheet> {
     });
   }
 
-  void _finish(String heard) {
-    final r = checkSpeech(widget.target, heard);
+  void _finish(String heard, {List<double?>? gops}) {
+    final r = applyGops(checkSpeech(widget.target, heard), gops);
     setState(() {
       _listening = false;
       _result = r;
@@ -397,7 +403,11 @@ class _SpeakCheckSheetState extends State<_SpeakCheckSheet> {
             ),
             const SizedBox(height: 6),
             const Align(alignment: Alignment.centerLeft, child: NoisyToggle()),
-            if (!_engine.isReady) ...[const SizedBox(height: 14), _ModelCard(engine: _engine)],
+            if (!_engine.isReady) ...[const SizedBox(height: 14), _ModelCard(engine: _engine)]
+            else if (!PronScorer.instance.isReady) ...[
+              const SizedBox(height: 14),
+              _PronModelCard(scorer: PronScorer.instance),
+            ],
             const SizedBox(height: 18),
             // 문장(결과가 나오면 단어별 색칠)
             Container(
@@ -487,6 +497,24 @@ class _SpeakCheckSheetState extends State<_SpeakCheckSheet> {
               ],
             ),
             if (r != null) ...[const SizedBox(height: 16), _ScoreRow(result: r, best: _best)],
+            if (r != null && r.rescued > 0) ...[
+              const SizedBox(height: 10),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.graphic_eq_rounded, size: 18, color: scheme.primary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '받아쓰기는 달랐지만, 소리를 정답과 직접 비교해서 '
+                      '${r.words.where((w) => w.byAcoustic).map((w) => '‘${cleanWord(w.word)}’').join(', ')} '
+                      '단어는 발음이 맞다고 봤어요.',
+                      style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                    ),
+                  ),
+                ],
+              ),
+            ],
             if (r != null && _wordByWord && r.score < 85) ...[
               const SizedBox(height: 12),
               Container(
@@ -635,6 +663,71 @@ class _EngineChip extends StatelessWidget {
   }
 }
 
+/// 발음 채점 모델 받기 카드(Moonshine은 있는데 채점 모델이 없을 때).
+class _PronModelCard extends StatelessWidget {
+  const _PronModelCard({required this.scorer});
+  final PronScorer scorer;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    final busy = scorer.isBusy;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: scheme.primary.withValues(alpha: 0.35)),
+        color: scheme.primaryContainer.withValues(alpha: 0.25),
+      ),
+      child: busy
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  scorer.state == ModelState.extracting
+                      ? '발음 채점 설치하는 중…'
+                      : '발음 채점 받는 중… ${(scorer.progress * 100).round()}%',
+                  style: text.titleSmall,
+                ),
+                const SizedBox(height: 8),
+                LinearProgressIndicator(
+                  value: scorer.state == ModelState.extracting ? null : scorer.progress,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ],
+            )
+          : Row(
+              children: [
+                Icon(Icons.graphic_eq_rounded, color: scheme.primary),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('정확한 발음 채점 받기', style: text.titleSmall),
+                      const SizedBox(height: 2),
+                      Text(
+                        scorer.error ??
+                            '받아쓰기가 엉뚱하게 나와도(latte → nothing) 실제 소리를 정답과 비교해 채점해요. '
+                                '약 ${PronScorer.approxMb}MB · Wi-Fi 권장',
+                        style: text.bodySmall?.copyWith(
+                            color: scorer.error != null ? scheme.error : scheme.onSurfaceVariant),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                FilledButton.tonal(
+                  onPressed: scorer.state == ModelState.checking ? null : scorer.download,
+                  child: Text(scorer.error != null ? '다시' : '받기'),
+                ),
+              ],
+            ),
+    );
+  }
+}
+
 /// Moonshine 모델 받기 안내/진행 카드.
 class _ModelCard extends StatelessWidget {
   const _ModelCard({required this.engine});
@@ -680,7 +773,7 @@ class _ModelCard extends StatelessWidget {
                   Text(
                     engine.error ??
                         '폰 안에서 도는 AI 음성 인식이에요. 한 번만 받으면 인터넷 없이 써요. '
-                            '약 ${MoonshineEngine.approxMb}MB · Wi-Fi 권장',
+                            '발음 채점 포함 약 ${MoonshineEngine.approxMb + PronScorer.approxMb}MB · Wi-Fi 권장',
                     style: text.bodySmall?.copyWith(
                       color: engine.error != null ? scheme.error : scheme.onSurfaceVariant,
                     ),
@@ -690,7 +783,12 @@ class _ModelCard extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             FilledButton.tonal(
-              onPressed: engine.state == ModelState.checking ? null : engine.download,
+              onPressed: engine.state == ModelState.checking
+                  ? null
+                  : () async {
+                      await engine.download();
+                      if (engine.isReady) await PronScorer.instance.download();
+                    },
               child: Text(engine.error != null ? '다시' : '받기'),
             ),
           ],

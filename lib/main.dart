@@ -8,6 +8,7 @@ import 'screens/song_list_screen.dart';
 import 'screens/story_list_screen.dart';
 import 'screens/vocab_screen.dart';
 import 'speech/moonshine.dart';
+import 'speech/pron_scorer.dart';
 import 'theme.dart';
 import 'update_check.dart';
 
@@ -16,6 +17,7 @@ Future<void> main() async {
   await AppState.instance.load();
   MoonshineEngine.instance.init(); // 음성 인식 모델이 받아져 있는지 확인(기다리지 않음)
   HangulPron.instance.load(); // 한글 발음 사전(기다리지 않음)
+  PronScorer.instance.init(); // 발음 채점 모델 확인
   LicenseRegistry.addLicense(() async* {
     yield LicenseEntryWithLineBreaks(
         ['CMU Pronouncing Dictionary'], await rootBundle.loadString('assets/cmudict-LICENSE.txt'));

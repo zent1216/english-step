@@ -263,7 +263,23 @@
   latte/cafe 같은 외래어는 `_overrides`(라테, 카페).
 - 음성 인식: 따라 말하기 시트 오른쪽 위 엔진 칩을 누르면 **Moonshine ↔ 폰 기본 인식(구글/삼성)** 전환(`AppState.usePhoneAsr`,
   SharedPreferences `usePhoneAsr`). 폰 기본 인식은 큰 어휘·언어 모델이라 latte 같은 단어에 강할 수 있다. 단어 연습 시트도 따른다.
-- **근본 해결 후보(다음 단계)**: 단어로 받아쓰지 않고 **음소(발음기호) 단위로 인식**해 CMU 사전의 정답 발음과 비교(GOP 방식, ELSA류).
-  후보 모델: wav2vec2 음소 인식 ONNX(buddy-pronunciation-onnx 영어 int8 약 357MB, ARPAbet, Apache-2.0 /
-  speako-phoneme-recognizer 약 355MB, IPA / charsiu 프레임 분류 정렬기 약 123MB). sherpa-onnx로는 못 돌려서
-  onnxruntime을 직접 써야 하고(sherpa_onnx의 libonnxruntime과 충돌 여부 확인 필요), 클라우드 세션에서 huggingface.co가 막혀 있어 시험 불가.
+- 근본 해결은 아래 "발음 채점(강제 정렬)" 참고.
+
+## 발음 채점: 강제 정렬 GOP (2026-10-09)
+- 문제: 받아쓰기(Moonshine)는 소리를 흔한 단어로 바꾸려 해서 latte를 정확히 말해도 "nothing"으로 받아쓰면 틀림 처리됐다.
+- 해결: **정답 문장을 알고 있으니 소리를 정답과 직접 맞춰 본다**(Goodness of Pronunciation, ELSA류 방식).
+  - CTC 음성 모델 **NeMo Conformer-CTC small(영어, int8 46MB)** — sherpa-onnx 공식 배포
+    `asr-models/sherpa-onnx-nemo-ctc-en-conformer-small.tar.bz2`(76MB)를 처음 한 번 받아 `앱폴더/pron`에 푼다(fp32 모델·예제는 지움).
+  - 실행: 새 패키지 없이 **sherpa_onnx가 넣어 둔 libonnxruntime.so를 dart:ffi로 직접 호출**(`lib/speech/ort.dart`,
+    OrtApi 함수 번호는 onnxruntime_c_api.h 순서, API 버전 17 요청). 직접 의존성 `ffi: 2.2.0` 추가.
+  - 특징: 칼디 80차원 fbank를 직접 구현(`lib/speech/fbank.dart`, kaldi-native-fbank와 오차 0.0001 이하, 테스트 있음) + 멜별 정규화.
+  - 정렬(`lib/speech/ctc_align.dart`, 순수 Dart): 정답 글자열(소문자 영문)을 덮는 모든 토큰 조합 격자에서 CTC 비터비 정렬
+    (단어 경계 자유 → "an iced"를 "a nice"로 나눠도 됨). 단어 구간마다 (정답 맞추기 점수 − 프레임별 최고 점수)/프레임 = GOP.
+  - 합치기(`applyGops`, pronunciation.dart): 받아쓰기로 맞은 단어는 그대로, 틀린 단어만 GOP ≥ −1.5면 맞음, ≥ −3.5면 비슷해요로 **구제**.
+    구제된 단어는 `WordCheck.byAcoustic`, 시트에 "받아쓰기는 달랐지만 소리를 직접 비교해서 ‘latte’ 단어는 발음이 맞다고 봤어요" 안내.
+  - 폰에서 짧은 문장 채점 약 0.1초(클라우드 기준 fbank 5ms + 모델 70~100ms + 정렬 5~30ms).
+- 클라우드 시험(목소리 6개 × 문장 5개, `scratchpad/moontest/bin/e2e.dart`):
+  자연 96.0 → 98.8, 천천히 97.3 → 99.3, **끊어 읽기 94.9 → 98.6(100점 16 → 23/30)**, 틀린 문장 68.1 → 71.7(100점 0/30 유지,
+  틀린 단어는 GOP −4~−10으로 계속 빨강). TTS 목소리라 실제 한국인 발음에서 기준(−1.5/−3.5) 조정이 필요할 수 있다.
+- UI: Moonshine "받기"를 누르면 발음 채점 모델도 이어서 받는다. Moonshine만 있는 사람에게는 "정확한 발음 채점 받기" 카드.
+  ⓘ "음성 인식 모델 다시 받기"는 두 모델을 다 지운다. 단어 발음 연습 시트도 같은 채점을 쓴다. 폰 기본 인식 모드에서는 녹음이 없어 GOP 없음.

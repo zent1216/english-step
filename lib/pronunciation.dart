@@ -13,10 +13,11 @@ import 'models.dart';
 enum WordMark { ok, close, miss }
 
 class WordCheck {
-  const WordCheck(this.word, {required this.mark, this.counted = true});
+  const WordCheck(this.word, {required this.mark, this.counted = true, this.byAcoustic = false});
   final String word; // 화면에 보일 원문 단어(문장부호 포함)
   final WordMark mark;
   final bool counted; // 점수에 포함되는 단어인지(문장부호만 있는 토큰은 제외)
+  final bool byAcoustic; // 받아쓰기는 달랐지만 소리를 직접 비교해(발음 채점) 올려준 단어
 
   bool get ok => mark == WordMark.ok;
 }
@@ -27,6 +28,7 @@ class SpeakResult {
   final String heard;
 
   int get total => words.where((w) => w.counted).length;
+  int get rescued => words.where((w) => w.counted && w.byAcoustic).length;
   int get matched => words.where((w) => w.counted && w.mark == WordMark.ok).length;
   int get close => words.where((w) => w.counted && w.mark == WordMark.close).length;
 
@@ -283,5 +285,31 @@ SpeakResult checkSpeech(String target, String heard) {
         }(),
     ],
     heard,
+  );
+}
+
+/// 발음 채점(GOP) 기준: 이 값 이상이면 "맞음", [gopClose] 이상이면 "비슷해요". (TTS 6개 목소리로 맞춤)
+const gopOk = -1.5;
+const gopClose = -3.5;
+
+/// 받아쓰기 결과 [r]에 단어별 발음 점수 [gops]를 더한다. 받아쓰기가 틀렸어도 소리가 정답과 맞으면 올려준다.
+/// 받아쓰기로 이미 맞은 단어는 그대로 둔다(발음 채점은 "구제"만 한다).
+SpeakResult applyGops(SpeakResult r, List<double?>? gops) {
+  if (gops == null || gops.length != r.words.length || r.heard.trim().isEmpty) return r;
+  return SpeakResult(
+    [
+      for (var i = 0; i < r.words.length; i++)
+        () {
+          final w = r.words[i];
+          final g = gops[i];
+          if (!w.counted || w.ok || g == null) return w;
+          if (g >= gopOk) return WordCheck(w.word, mark: WordMark.ok, byAcoustic: true);
+          if (g >= gopClose && w.mark == WordMark.miss) {
+            return WordCheck(w.word, mark: WordMark.close, byAcoustic: true);
+          }
+          return w;
+        }(),
+    ],
+    r.heard,
   );
 }

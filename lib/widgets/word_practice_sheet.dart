@@ -14,6 +14,7 @@ import '../app_state.dart';
 import '../models.dart';
 import '../pronunciation.dart';
 import '../speech/moonshine.dart';
+import '../speech/pron_scorer.dart';
 import '../speech/recorder.dart';
 import '../theme.dart';
 import '../translate.dart';
@@ -175,6 +176,9 @@ class _WordPracticeSheetState extends State<_WordPracticeSheet> {
           heard = c;
         }
       }
+      // 발음 채점: 받아쓰기가 다른 단어로 나와도 소리가 맞으면 인정
+      final gops = PronScorer.instance.score(samples, widget.word);
+      if (heard.isNotEmpty) best = applyGops(checkSpeech(widget.word, heard), gops).score;
       if (!mounted) return;
       setState(() => _decoding = false);
       _score(best < 0 ? 0 : best, heard);
