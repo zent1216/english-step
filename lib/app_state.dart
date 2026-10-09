@@ -23,6 +23,7 @@ class AppState extends ChangeNotifier {
   Set<String> doneSets = {}; // Lv.0 첫걸음 문장 세트 (lv0-0 ~ lv0-19)
   double speechRate = 0.9;
   bool showPron = true; // 영어 아래 한글 발음 표기
+  bool noisyMode = false; // 시끄러운 곳 모드(통화용 녹음으로 주변 소음 줄이기)
   // 따라 말하기 문장별 최고 점수(0~100). 키는 [speakKey].
   Map<String, int> speakScores = {};
 
@@ -34,6 +35,7 @@ class AppState extends ChangeNotifier {
     doneSets = (p.getStringList('doneSets') ?? []).toSet();
     speechRate = p.getDouble('speechRate') ?? 0.9;
     showPron = p.getBool('showPron') ?? true;
+    noisyMode = p.getBool('noisyMode') ?? false;
     try {
       final raw = p.getString('speakScores');
       speakScores = raw == null
@@ -157,6 +159,13 @@ class AppState extends ChangeNotifier {
     speakScores = {};
     speechRate = 0.9;
     showPron = true;
+    noisyMode = false;
+    notifyListeners();
+  }
+
+  void setNoisyMode(bool v) {
+    noisyMode = v;
+    _prefs?.setBool('noisyMode', v);
     notifyListeners();
   }
 

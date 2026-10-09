@@ -221,7 +221,7 @@ class _SpeakCheckSheetState extends State<_SpeakCheckSheet> {
     });
     final Float32List samples;
     try {
-      samples = await _recorder.record();
+      samples = await _recorder.record(noisy: AppState.instance.noisyMode);
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -385,6 +385,8 @@ class _SpeakCheckSheetState extends State<_SpeakCheckSheet> {
                   : '듣고 → 마이크를 누르고 따라 말해보세요. 천천히 말해도 괜찮아요.',
               style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
             ),
+            const SizedBox(height: 6),
+            const Align(alignment: Alignment.centerLeft, child: NoisyToggle()),
             if (!_useMoonshine) ...[const SizedBox(height: 14), _ModelCard(engine: _engine)],
             const SizedBox(height: 18),
             // 문장(결과가 나오면 단어별 색칠)
@@ -554,6 +556,26 @@ class _SpeakCheckSheetState extends State<_SpeakCheckSheet> {
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// "시끄러운 곳 모드" 체크 칸. 켜면 통화할 때처럼 마이크 여러 개로 주변 소음을 줄여 녹음한다(설정은 저장됨).
+class NoisyToggle extends StatelessWidget {
+  const NoisyToggle({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: AppState.instance,
+      builder: (context, _) => FilterChip(
+        avatar: const Icon(Icons.noise_control_off_rounded, size: 18),
+        label: const Text('시끄러운 곳 모드'),
+        selected: AppState.instance.noisyMode,
+        visualDensity: VisualDensity.compact,
+        tooltip: '주변이 시끄러울 때 켜세요. 조용한 곳에서는 끄는 게 더 정확해요.',
+        onSelected: AppState.instance.setNoisyMode,
       ),
     );
   }

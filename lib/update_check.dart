@@ -222,6 +222,18 @@ class _AppInfoSheetState extends State<_AppInfoSheet> {
                 onChanged: AppState.instance.setShowPron,
               ),
             ),
+            ListenableBuilder(
+              listenable: AppState.instance,
+              builder: (context, _) => SwitchListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                secondary: const Icon(Icons.noise_control_off_rounded),
+                title: const Text('시끄러운 곳 모드'),
+                subtitle: const Text('통화할 때처럼 마이크 여러 개로 주변 소음을 줄여 녹음해요. '
+                    '조용한 곳에서는 끄는 게 더 정확해요.'),
+                value: AppState.instance.noisyMode,
+                onChanged: AppState.instance.setNoisyMode,
+              ),
+            ),
             const SizedBox(height: 8),
             Text('데이터 관리', style: text.titleSmall),
             const SizedBox(height: 4),

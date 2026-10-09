@@ -142,7 +142,7 @@ class _WordPracticeSheetState extends State<_WordPracticeSheet> {
     });
     final Float32List samples;
     try {
-      samples = await _recorder.record();
+      samples = await _recorder.record(noisy: AppState.instance.noisyMode);
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -343,6 +343,8 @@ class _WordPracticeSheetState extends State<_WordPracticeSheet> {
                 style: text.labelLarge?.copyWith(color: scheme.onSurfaceVariant),
               ),
             ),
+            const SizedBox(height: 6),
+            const Center(child: NoisyToggle()),
             if (_lastScore != null) ...[
               const SizedBox(height: 14),
               Container(

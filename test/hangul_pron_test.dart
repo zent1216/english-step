@@ -71,4 +71,13 @@ void main() {
     await tester.pump();
     expect(find.text('해브 어 나이스 데이'), findsOneWidget);
   });
+
+  test('시끄러운 곳 모드 설정은 저장된다', () async {
+    SharedPreferences.setMockInitialValues({});
+    await AppState.instance.load();
+    expect(AppState.instance.noisyMode, isFalse);
+    AppState.instance.setNoisyMode(true);
+    await AppState.instance.load();
+    expect(AppState.instance.noisyMode, isTrue);
+  });
 }

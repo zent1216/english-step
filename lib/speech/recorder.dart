@@ -36,7 +36,10 @@ class TakeRecorder {
   Future<bool> hasPermission() => _rec.hasPermission();
 
   /// 녹음을 시작하고, 끝나면(자동 또는 [stop]) 음성 샘플을 돌려준다.
-  Future<Float32List> record() async {
+  ///
+  /// [noisy](시끄러운 곳 모드)면 녹음 종류를 "통화용"으로 바꾼다. 갤럭시 S25처럼 마이크가 여러 개인 폰은
+  /// 통화할 때처럼 마이크들을 함께 써서 주변 소음을 지운다. 조용한 곳에서는 목소리가 조금 뭉개질 수 있다.
+  Future<Float32List> record({bool noisy = false}) async {
     _bytes.clear();
     _heardSpeech = false;
     _noiseSum = 0;
@@ -44,13 +47,21 @@ class TakeRecorder {
     _speechLevel = 0.03;
     _started = _lastLoud = DateTime.now();
     _done = Completer<Float32List>();
-    final stream = await _rec.startStream(const RecordConfig(
-      encoder: AudioEncoder.pcm16bits,
-      sampleRate: _rate,
-      numChannels: 1,
-      autoGain: true,
-      noiseSuppress: true,
-    ));
+    final stream = await _rec.startStream(
+      RecordConfig(
+        encoder: AudioEncoder.pcm16bits,
+        sampleRate: _rate,
+        numChannels: 1,
+        autoGain: true,
+        noiseSuppress: true,
+        echoCancel: noisy,
+        androidConfig: AndroidRecordConfig(
+          audioSource: noisy
+              ? AndroidAudioSource.voiceCommunication
+              : AndroidAudioSource.defaultSource,
+        ),
+      ),
+    );
     _sub = stream.listen(_onChunk);
     return _done!.future;
   }
