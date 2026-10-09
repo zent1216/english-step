@@ -171,3 +171,20 @@
 - 패키지(Flutter 3.41 호환으로 고정): sherpa_onnx 1.13.8, record 6.2.1, audioplayers 6.7.1, path_provider 2.1.6, archive 4.0.9.
 - 받아쓰기(decode)는 메인 isolate에서 돌아 짧게 화면이 멈출 수 있다(문장 길이 기준 1초 안팎 예상, 실기기 미측정).
 
+
+## Google Play 내부 테스트 배포 (2026-10-09 준비)
+- 친구 배포는 **Play 내부 테스트**로 한다(leakcall과 같은 방식, 자동 업데이트). leakcall 저장소가 비공개라
+  GitHub 릴리스 링크는 로그인한 본인만 받을 수 있다. **leakcall 저장소는 공개로 바꾸면 안 됨**(leakcall 업로드 키가 들어 있음).
+- 서명: 직접 설치용 APK = `ci-debug.keystore`(테스트 키, 저장소에 있음). Play용 AAB = **업로드 키**(저장소에 없음).
+  - `build.gradle.kts`가 `android/key.properties`(커밋 안 됨: storeFile, storePassword, keyAlias) 또는 환경변수
+    `UPLOAD_KEYSTORE_PATH`/`UPLOAD_KEYSTORE_PASSWORD`에서 읽는다. `-PplayUpload`(flutter는
+    `--android-project-arg=playUpload=true`)일 때만 업로드 키로 서명.
+  - GitHub Actions: Secrets `UPLOAD_KEYSTORE_BASE64`(jks를 base64), `UPLOAD_KEYSTORE_PASSWORD`가 있으면
+    AAB도 빌드해 `english-step-latest` 릴리스에 `english_step.aab`로 올린다.
+  - 업로드 키 비밀번호를 소스에 하드코딩하려다 자동 안전 검사에 막혔다 → 비밀값은 Secrets/key.properties로만.
+- Play 앱 서명(Play App Signing)을 쓰므로 Play가 자기 키로 재서명한다. 그래서 **직접 설치한 앱과 Play 앱은 서명이
+  달라** 같은 폰에서 바꿔 설치하려면 한 번 삭제해야 한다.
+- 개인정보처리방침 원문: `english_step/PRIVACY.md` (공개 URL로 올려서 Play Console에 입력해야 함. 문의 이메일 채울 것).
+- 마이크 사용 앱이라 Play Console의 데이터 보안 양식에 "오디오: 수집 안 함(기기 내 처리)"로 답한다.
+- 첫 AAB는 Play Console에서 손으로 올려야 한다(Google 정책). 그 뒤 자동 업로드를 원하면 서비스 계정 JSON을 Secrets에 넣고
+  업로드 단계를 추가할 것(아직 안 함).

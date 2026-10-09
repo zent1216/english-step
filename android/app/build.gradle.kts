@@ -34,8 +34,19 @@ android {
         }
     }
 
-    // 테스트용 고정 서명 키. PC 빌드와 GitHub Actions 빌드가 같은 키로 서명돼야
-    // 폰에서 삭제 없이 업데이트 설치가 된다. (Play 배포 시에는 별도 업로드 키 필요)
+    // 서명 키 두 개.
+    // - debug(ci-debug.keystore, 테스트 전용): 직접 설치용 APK. PC·Actions 빌드가 같은 키라
+    //   폰에서 삭제 없이 업데이트된다.
+    // - upload: Google Play 업로드용(AAB). 키 파일과 비밀번호는 저장소에 넣지 않는다.
+    //   android/key.properties(커밋 안 됨) 또는 환경변수 UPLOAD_KEYSTORE_PATH / UPLOAD_KEYSTORE_PASSWORD
+    //   (GitHub Actions에서는 Secrets로 넣어준다)에서 읽는다.
+    val keyProps = java.util.Properties().apply {
+        val f = rootProject.file("key.properties")
+        if (f.exists()) f.inputStream().use { load(it) }
+    }
+    val uploadStore = keyProps.getProperty("storeFile") ?: System.getenv("UPLOAD_KEYSTORE_PATH")
+    val uploadPass = keyProps.getProperty("storePassword") ?: System.getenv("UPLOAD_KEYSTORE_PASSWORD")
+
     signingConfigs {
         getByName("debug") {
             storeFile = file("ci-debug.keystore")
@@ -43,13 +54,25 @@ android {
             keyAlias = "androiddebugkey"
             keyPassword = "android"
         }
+        if (uploadStore != null && uploadPass != null) {
+            create("upload") {
+                storeFile = file(uploadStore)
+                storePassword = uploadPass
+                keyAlias = keyProps.getProperty("keyAlias") ?: "upload"
+                keyPassword = uploadPass
+            }
+        }
     }
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // Play 업로드용 빌드만 업로드 키로 서명한다:
+            //   flutter build appbundle --release --android-project-arg=playUpload=true
+            val usePlayKey = project.hasProperty("playUpload")
+            if (usePlayKey && signingConfigs.findByName("upload") == null) {
+                throw GradleException("업로드 키가 없어요. key.properties나 UPLOAD_KEYSTORE_* 환경변수를 확인하세요.")
+            }
+            signingConfig = signingConfigs.getByName(if (usePlayKey) "upload" else "debug")
         }
     }
 }
