@@ -1,9 +1,20 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
+
+// Play 업로드 키 정보(저장소 밖): android/key.properties 또는 환경변수.
+val keyProps = Properties().also { props ->
+    val f = rootProject.file("key.properties")
+    if (f.exists()) FileInputStream(f).use { props.load(it) }
+}
+val uploadStore: String? = keyProps.getProperty("storeFile") ?: System.getenv("UPLOAD_KEYSTORE_PATH")
+val uploadPass: String? = keyProps.getProperty("storePassword") ?: System.getenv("UPLOAD_KEYSTORE_PASSWORD")
 
 android {
     namespace = "com.facilitymanager.english_step"
@@ -40,12 +51,6 @@ android {
     // - upload: Google Play 업로드용(AAB). 키 파일과 비밀번호는 저장소에 넣지 않는다.
     //   android/key.properties(커밋 안 됨) 또는 환경변수 UPLOAD_KEYSTORE_PATH / UPLOAD_KEYSTORE_PASSWORD
     //   (GitHub Actions에서는 Secrets로 넣어준다)에서 읽는다.
-    val keyProps = java.util.Properties().apply {
-        val f = rootProject.file("key.properties")
-        if (f.exists()) f.inputStream().use { load(it) }
-    }
-    val uploadStore = keyProps.getProperty("storeFile") ?: System.getenv("UPLOAD_KEYSTORE_PATH")
-    val uploadPass = keyProps.getProperty("storePassword") ?: System.getenv("UPLOAD_KEYSTORE_PASSWORD")
 
     signingConfigs {
         getByName("debug") {
@@ -54,12 +59,14 @@ android {
             keyAlias = "androiddebugkey"
             keyPassword = "android"
         }
-        if (uploadStore != null && uploadPass != null) {
+        val store = uploadStore
+        val pass = uploadPass
+        if (store != null && pass != null) {
             create("upload") {
-                storeFile = file(uploadStore)
-                storePassword = uploadPass
+                storeFile = file(store)
+                storePassword = pass
                 keyAlias = keyProps.getProperty("keyAlias") ?: "upload"
-                keyPassword = uploadPass
+                keyPassword = pass
             }
         }
     }
