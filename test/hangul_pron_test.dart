@@ -31,6 +31,10 @@ void main() {
       expect(h('W EH1 R'), '웨어'); // where
       expect(h('F AO1 R'), '포'); // for
       expect(h('AO1 R'), '오어'); // or
+      expect(h('W AO1 K'), '워크'); // walk
+      expect(h('JH AA1 B'), '잡'); // job
+      expect(h('AW1 T'), '아웃'); // out
+      expect(h('TH R IY1'), '쓰리'); // three
       expect(h('B OW1 T S'), '보츠'); // boats
       expect(h('L IH1 T AH0 L'), '리틀'); // little
     });
@@ -46,6 +50,7 @@ void main() {
     expect(HangulPron.instance.sentence('Can I have an iced latte, please?'), '캔 아이 해브 언 아이스트 라테 플리즈');
     expect(HangulPron.instance.sentence('the apple'), '디 애플');
     expect(HangulPron.instance.word('an'), '앤'); // 단어 하나만 있으면 원래 소리
+    expect(HangulPron.instance.sentence('What time is it?'), '왓 타임 이즈 잇');
   });
 
   testWidgets('"한글 발음" 체크로 보이기/숨기기', (tester) async {

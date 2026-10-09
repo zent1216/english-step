@@ -101,6 +101,13 @@ const _overrides = <String, String>{
   'okay': '오케이',
   'ok': '오케이',
   // 사전에는 "라테이"처럼 나오지만 실제로는 끝 모음을 짧게 말하는 외래어
+  // 미국식 발음기호를 옮기면 낯선 표기가 되는 흔한 단어(한국에서 굳어진 표기로)
+  'what': '왓',
+  'was': '워즈',
+  'your': '유어',
+  'coffee': '커피',
+  'sorry': '쏘리',
+  'hello': '헬로우',
   'latte': '라테',
   'lattes': '라테스',
   'cafe': '카페',
@@ -215,7 +222,8 @@ const _vowels = <String, List<String>>{
   'UH': ['ㅜ'],
   'UW': ['ㅜ'],
 };
-const _shortVowels = {'AE', 'EH', 'IH', 'UH', 'AH', 'AA', 'AO'};
+// AO(talk, dog)는 넣지 않는다: talk → 토크, dog → 도그가 한국에서 익숙한 표기.
+const _shortVowels = {'AE', 'EH', 'IH', 'UH', 'AH', 'AA'};
 
 // 모음 앞 자음(초성)
 const _onset = <String, String>{
@@ -363,9 +371,19 @@ String phonesToHangul(List<String> raw) {
       last.jong = {'M': 'ㅁ', 'N': 'ㄴ', 'NG': 'ㅇ', 'L': 'ㄹ'}[p]!;
       continue;
     }
-    // 짧은 모음 뒤 p/t/k/g는 받침(cat → 캣, stop → 스탑, bag → 백)
-    if (canJong && _shortVowels.contains(prev) && const {'P', 'T', 'K', 'G'}.contains(p)) {
-      last.jong = {'P': 'ㅂ', 'T': 'ㅅ', 'K': 'ㄱ', 'G': 'ㄱ'}[p]!;
+    // 짧은 모음 뒤 p/t/k/g/b는 받침(cat → 캣, stop → 스탑, bag → 백, job → 잡)
+    if (canJong && _shortVowels.contains(prev) && const {'P', 'T', 'K', 'G', 'B'}.contains(p)) {
+      last.jong = {'P': 'ㅂ', 'T': 'ㅅ', 'K': 'ㄱ', 'G': 'ㄱ', 'B': 'ㅂ'}[p]!;
+      continue;
+    }
+    // "아우" 뒤 t/p도 받침(out → 아웃, about → 어바웃)
+    if (canJong && prev == 'AW' && (p == 'T' || p == 'P')) {
+      last.jong = p == 'T' ? 'ㅅ' : 'ㅂ';
+      continue;
+    }
+    // th 다음에 r이 오면 "쓰"(three → 쓰리, throw → 쓰로우)
+    if (p == 'TH' && next == 'R') {
+      out.add(_Syl('ㅆ', 'ㅡ'));
       continue;
     }
     // 받침 없는 "ㅡ" 글자 뒤에 오는 m/n은 그 글자의 받침(rhythm → 리듬)

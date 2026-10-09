@@ -260,7 +260,8 @@
 ## 약형 한글 표기 + 엔진 바꾸기 (2026-10-09)
 - 피드백: "an이 언인데 앤으로 나옴", "latte가 라테이로 나옴", "latte를 잘 말해도 nothing으로 인식".
 - 한글 발음: 문장 속 기능어는 약형(`_weakForms`: a 어, an 언, the 더/모음 앞 디, of 어브, to 투). 단어 하나만 있으면 원래 소리(an → 앤).
-  latte/cafe 같은 외래어는 `_overrides`(라테, 카페).
+  latte/cafe 같은 외래어와, 미국식 발음기호를 옮기면 낯선 흔한 단어(what 왓, was 워즈, your 유어, coffee 커피, sorry 쏘리, hello 헬로우)는 `_overrides`.
+  규칙: AO 뒤 받침 안 씀(talk 토크, dog 도그), 짧은 모음 뒤 b 받침(job 잡), "아우" 뒤 t·p 받침(out 아웃), th+r → 쓰(three 쓰리).
 - 음성 인식: 따라 말하기 시트 오른쪽 위 엔진 칩을 누르면 **Moonshine ↔ 폰 기본 인식(구글/삼성)** 전환(`AppState.usePhoneAsr`,
   SharedPreferences `usePhoneAsr`). 폰 기본 인식은 큰 어휘·언어 모델이라 latte 같은 단어에 강할 수 있다. 단어 연습 시트도 따른다.
 - 근본 해결은 아래 "발음 채점(강제 정렬)" 참고.
