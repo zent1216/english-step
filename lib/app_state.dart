@@ -21,6 +21,7 @@ class AppState extends ChangeNotifier {
   List<Song> songs = [];
   Set<String> doneStories = {};
   Set<String> doneSets = {}; // Lv.0 첫걸음 문장 세트 (lv0-0 ~ lv0-19)
+  Set<String> doneBasics = {}; // 기초 탭 레슨
   double speechRate = 0.9;
   bool showPron = true; // 영어 아래 한글 발음 표기
   bool noisyMode = false; // 시끄러운 곳 모드(통화용 녹음으로 주변 소음 줄이기)
@@ -34,6 +35,7 @@ class AppState extends ChangeNotifier {
     songs = _decodeList(p.getString('songs'), Song.fromJson);
     doneStories = (p.getStringList('doneStories') ?? []).toSet();
     doneSets = (p.getStringList('doneSets') ?? []).toSet();
+    doneBasics = (p.getStringList('doneBasics') ?? []).toSet();
     speechRate = p.getDouble('speechRate') ?? 0.9;
     showPron = p.getBool('showPron') ?? true;
     noisyMode = p.getBool('noisyMode') ?? false;
@@ -112,6 +114,13 @@ class AppState extends ChangeNotifier {
   }
 
   // ---- Lv.0 첫걸음 문장 ----
+  void markBasicsDone(String id) {
+    if (doneBasics.add(id)) {
+      _prefs?.setStringList('doneBasics', doneBasics.toList());
+      notifyListeners();
+    }
+  }
+
   void markSetDone(String id) {
     if (doneSets.add(id)) {
       _prefs?.setStringList('doneSets', doneSets.toList());
@@ -158,6 +167,7 @@ class AppState extends ChangeNotifier {
     songs = [];
     doneStories = {};
     doneSets = {};
+    doneBasics = {};
     speakScores = {};
     speechRate = 0.9;
     showPron = true;

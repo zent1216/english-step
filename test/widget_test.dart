@@ -14,6 +14,9 @@ void main() {
 
   testWidgets('이야기 목록 → 읽기 → 퀴즈 정답이면 완료', (tester) async {
     await tester.pumpWidget(const EnglishStepApp());
+    expect(find.text('영어 문장의 뼈대부터'), findsOneWidget); // 첫 탭은 기초
+    await tester.tap(find.byIcon(Icons.menu_book_outlined));
+    await tester.pumpAndSettle();
     expect(find.text('A Coffee, Please'), findsOneWidget);
 
     await tester.tap(find.text('A Coffee, Please'));
@@ -29,6 +32,8 @@ void main() {
 
   testWidgets('형광펜 표현을 누르면 뜻 시트 → 단어장에 담기', (tester) async {
     await tester.pumpWidget(const EnglishStepApp());
+    await tester.tap(find.byIcon(Icons.menu_book_outlined));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('A Coffee, Please'));
     await tester.pumpAndSettle();
 
@@ -69,6 +74,8 @@ void main() {
 
   testWidgets('Lv.0 첫걸음: 세트 열기 → 해석 보기 → 완료', (tester) async {
     await tester.pumpWidget(const EnglishStepApp());
+    await tester.tap(find.byIcon(Icons.menu_book_outlined));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Lv.0 첫걸음 문장'));
     await tester.pumpAndSettle();
     expect(find.text('20'), findsOneWidget); // 20세트

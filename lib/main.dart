@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 
 import 'app_state.dart';
 import 'hangul_pron.dart';
+import 'screens/basics_screens.dart';
 import 'screens/song_list_screen.dart';
 import 'screens/story_list_screen.dart';
 import 'screens/vocab_screen.dart';
@@ -40,7 +41,7 @@ class EnglishStepApp extends StatelessWidget {
   }
 }
 
-/// 하단 탭 3개(이야기 / 팝송 연습 / 단어장)를 가진 첫 화면.
+/// 하단 탭 4개(기초 / 이야기 / 팝송 연습 / 단어장)를 가진 첫 화면.
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
 
@@ -63,7 +64,7 @@ class _HomeShellState extends State<HomeShell> {
     return Scaffold(
       body: IndexedStack(
         index: _tab,
-        children: const [StoryListScreen(), SongListScreen(), VocabScreen()],
+        children: const [BasicsHomeScreen(), StoryListScreen(), SongListScreen(), VocabScreen()],
       ),
       bottomNavigationBar: ListenableBuilder(
         listenable: AppState.instance,
@@ -78,6 +79,11 @@ class _HomeShellState extends State<HomeShell> {
             selectedIndex: _tab,
             onDestinationSelected: (i) => setState(() => _tab = i),
             destinations: [
+              const NavigationDestination(
+                icon: Icon(Icons.extension_outlined),
+                selectedIcon: Icon(Icons.extension),
+                label: '기초',
+              ),
               const NavigationDestination(
                 icon: Icon(Icons.menu_book_outlined),
                 selectedIcon: Icon(Icons.menu_book),
