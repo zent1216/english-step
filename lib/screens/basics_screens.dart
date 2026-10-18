@@ -20,12 +20,13 @@ Color slotColor(Slot s) => switch (s) {
 
 void _say(String text) => Speaker.instance.speak(text, rate: AppState.instance.speechRate).catchError((_) {});
 
-/// 색깔 조각 하나. [showLabel]이면 아래에 칸 이름.
+/// 색깔 조각 하나. [showLabel]이면 아래에 칸 이름과 그 칸이 답하는 질문(누르면 칸 설명창).
 class ChunkBlock extends StatelessWidget {
-  const ChunkBlock(this.chunk, {super.key, this.showLabel = true, this.big = false});
+  const ChunkBlock(this.chunk, {super.key, this.showLabel = true, this.big = false, this.highlight = false});
   final Chunk chunk;
   final bool showLabel;
   final bool big;
+  final bool highlight; // 칸 설명창 예문에서 이 칸을 진하게
 
   @override
   Widget build(BuildContext context) {
@@ -36,8 +37,11 @@ class ChunkBlock extends StatelessWidget {
         Container(
           padding: EdgeInsets.symmetric(horizontal: big ? 12 : 10, vertical: big ? 9 : 6),
           decoration: BoxDecoration(
-            color: c.withValues(alpha: 0.13),
-            border: Border.all(color: c.withValues(alpha: 0.7), width: 1.5),
+            color: c.withValues(alpha: highlight ? 0.3 : 0.13),
+            border: Border.all(
+              color: c.withValues(alpha: highlight ? 1 : 0.7),
+              width: highlight ? 2.5 : 1.5,
+            ),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
@@ -46,11 +50,20 @@ class ChunkBlock extends StatelessWidget {
           ),
         ),
         if (showLabel)
-          Padding(
-            padding: const EdgeInsets.only(top: 3),
-            child: Text(
-              chunk.slot.label,
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: c),
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => showSlotSheet(context, chunk.slot),
+            child: Padding(
+              padding: const EdgeInsets.only(top: 3, left: 2, right: 2),
+              child: Column(
+                children: [
+                  Text(
+                    chunk.slot.label,
+                    style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: c),
+                  ),
+                  Text(chunk.slot.ask, style: TextStyle(fontSize: 9.5, color: c.withValues(alpha: 0.85))),
+                ],
+              ),
             ),
           ),
       ],
@@ -76,38 +89,67 @@ class SentenceMapLegend extends StatelessWidget {
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             for (final s in Slot.values) ...[
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: slotColor(s).withValues(alpha: 0.13),
-                  border: Border.all(color: slotColor(s).withValues(alpha: 0.7)),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  s.label,
-                  style: TextStyle(fontWeight: FontWeight.w700, color: slotColor(s), fontSize: 13),
+              InkWell(
+                borderRadius: BorderRadius.circular(10),
+                onTap: () => showSlotSheet(context, s),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: slotColor(s).withValues(alpha: 0.13),
+                    border: Border.all(color: slotColor(s).withValues(alpha: 0.7)),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    s.label,
+                    style: TextStyle(fontWeight: FontWeight.w700, color: slotColor(s), fontSize: 13),
+                  ),
                 ),
               ),
               if (s != Slot.m) Icon(Icons.chevron_right_rounded, size: 16, color: scheme.outline),
             ],
           ],
         ),
-        if (!compact) ...[
-          const SizedBox(height: 10),
+        if (compact)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text('칸 이름을 누르면 무슨 뜻인지 설명이 나와요', style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
+          )
+        else ...[
+          const SizedBox(height: 12),
+          Text('칸 사전 · 누르면 자세한 설명', style: text.labelLarge?.copyWith(color: scheme.onSurfaceVariant)),
+          const SizedBox(height: 4),
           for (final s in Slot.values)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 3),
-              child: Text.rich(
-                TextSpan(
+            InkWell(
+              key: ValueKey('slotRow-${s.name}'),
+              borderRadius: BorderRadius.circular(10),
+              onTap: () => showSlotSheet(context, s),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 7),
+                child: Row(
                   children: [
-                    TextSpan(
-                      text: '${s.label}  ',
-                      style: TextStyle(fontWeight: FontWeight.w700, color: slotColor(s)),
+                    Container(width: 5, height: 34, color: slotColor(s)),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text.rich(
+                        TextSpan(
+                          children: [
+                            TextSpan(
+                              text: '${s.label}  ',
+                              style: TextStyle(fontWeight: FontWeight.w800, color: slotColor(s), fontSize: 15),
+                            ),
+                            TextSpan(
+                              text: '${s.ask}\n',
+                              style: TextStyle(fontWeight: FontWeight.w700, color: scheme.onSurface),
+                            ),
+                            TextSpan(text: s.help),
+                          ],
+                        ),
+                        style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant, height: 1.4),
+                      ),
                     ),
-                    TextSpan(text: s.help),
+                    Icon(Icons.chevron_right_rounded, color: scheme.outline),
                   ],
                 ),
-                style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
               ),
             ),
         ],
@@ -115,6 +157,115 @@ class SentenceMapLegend extends StatelessWidget {
     );
   }
 }
+
+/// 칸 설명창: 이 칸이 무슨 뜻인지, 학교 문법 이름, 쉬운 설명, 예문(그 칸을 진하게).
+Future<void> showSlotSheet(BuildContext context, Slot slot) {
+  final c = slotColor(slot);
+  return showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (context) {
+      final text = Theme.of(context).textTheme;
+      final scheme = Theme.of(context).colorScheme;
+      return DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.75,
+        maxChildSize: 0.95,
+        builder: (context, scroll) => ListView(
+          controller: scroll,
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: c.withValues(alpha: 0.15),
+                    border: Border.all(color: c, width: 2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    slot.label,
+                    style: TextStyle(color: c, fontWeight: FontWeight.w800, fontSize: 20),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(slot.ask, style: text.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(slot.help, style: text.bodyLarge?.copyWith(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 6),
+            Text.rich(
+              TextSpan(
+                children: [
+                  const TextSpan(
+                    text: '학교 문법 이름  ',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  TextSpan(text: slot.grammar),
+                ],
+              ),
+              style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(color: c.withValues(alpha: 0.07), borderRadius: BorderRadius.circular(14)),
+              child: Text(slot.explain, style: text.bodyLarge?.copyWith(height: 1.6)),
+            ),
+            const SizedBox(height: 16),
+            Text('예문 (누르면 들려요)', style: text.labelLarge?.copyWith(color: scheme.onSurfaceVariant)),
+            const SizedBox(height: 8),
+            for (final sample in slot.samples)
+              () {
+                final chunks = parseChunks(sample);
+                final en = joinChunks(chunks, _endOf(chunks));
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(20),
+                    onTap: () => _say(en),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 8,
+                            children: [
+                              for (final ch in chunks) ChunkBlock(ch, showLabel: false, highlight: ch.slot == slot),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              Expanded(child: Text(en, style: englishStyle(context, size: 16))),
+                              Icon(Icons.volume_up_rounded, size: 20, color: scheme.primary),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }(),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+/// 질문(의문사나 도우미로 시작, Because 제외)이면 물음표
+String _endOf(List<Chunk> chunks) =>
+    chunks.isNotEmpty && (chunks.first.slot == Slot.q || chunks.first.slot == Slot.h) && chunks.first.text != 'Because'
+    ? '?'
+    : '.';
 
 // ---------------- 기초 탭 첫 화면 ----------------
 
@@ -175,6 +326,11 @@ class BasicsHomeScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('영어 문장 지도', style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 4),
+                      Text(
+                        '영어 문장은 이 6칸이 늘 이 순서로 서요. 모든 칸이 다 있어야 하는 건 아니에요(누가·한다는 거의 항상, 나머지는 필요할 때만).',
+                        style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                      ),
                       const SizedBox(height: 10),
                       const SentenceMapLegend(),
                     ],
@@ -319,8 +475,7 @@ class _LessonScreenState extends State<LessonScreen> {
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
               child: Row(
                 children: [
-                  if (_step > 0 && !last)
-                    TextButton(onPressed: () => setState(() => _step--), child: const Text('이전')),
+                  if (_step > 0 && !last) TextButton(onPressed: () => setState(() => _step--), child: const Text('이전')),
                   const Spacer(),
                   if (last && widget.index + 1 < basicsLessons.length) ...[
                     OutlinedButton(onPressed: () => Navigator.pop(context), child: const Text('목록')),
@@ -337,9 +492,7 @@ class _LessonScreenState extends State<LessonScreen> {
                       onPressed: _canNext ? _next : null,
                       style: FilledButton.styleFrom(backgroundColor: _canNext ? scheme.primary : null),
                       child: Text(
-                        last
-                            ? '목록으로'
-                            : (_step == c - 1 ? '튜토리얼 끝 · 카드 문제 시작 ▶' : (_canNext ? '다음' : '문제를 풀어 보세요')),
+                        last ? '목록으로' : (_step == c - 1 ? '튜토리얼 끝 · 카드 문제 시작 ▶' : (_canNext ? '다음' : '문제를 풀어 보세요')),
                       ),
                     ),
                 ],
@@ -376,11 +529,7 @@ class _StageBar extends StatelessWidget {
             children: [
               Text(
                 '${done ? '✓' : '${i + 1}'} $label',
-                style: TextStyle(
-                  fontWeight: on ? FontWeight.w800 : FontWeight.w600,
-                  color: color,
-                  fontSize: 13,
-                ),
+                style: TextStyle(fontWeight: on ? FontWeight.w800 : FontWeight.w600, color: color, fontSize: 13),
               ),
               if (count != null && on) Text(count, style: TextStyle(fontSize: 11, color: color)),
             ],
@@ -445,9 +594,7 @@ class _ConceptView extends StatelessWidget {
                         text: '튜토리얼 $page/$pages\n',
                         style: TextStyle(fontWeight: FontWeight.w700, color: scheme.tertiary),
                       ),
-                      TextSpan(
-                        text: '규칙을 먼저 훑어봐요. 예문은 눌러서 들을 수 있어요(끌어지지 않아요). 다 읽으면 카드 문제 $drills개를 직접 풀어요.',
-                      ),
+                      TextSpan(text: '규칙을 먼저 훑어봐요. 예문은 눌러서 들을 수 있어요(끌어지지 않아요). 다 읽으면 카드 문제 $drills개를 직접 풀어요.'),
                     ],
                   ),
                   style: text.bodySmall,
@@ -557,9 +704,7 @@ class _BuildDrillViewState extends State<BuildDrillView> {
     final got = [for (final i in _placed) _pool[i]];
     final ok =
         got.length == d.answer.length &&
-        [
-          for (var k = 0; k < got.length; k++) got[k].tip == null && got[k].text == d.answer[k].text,
-        ].every((x) => x);
+        [for (var k = 0; k < got.length; k++) got[k].tip == null && got[k].text == d.answer[k].text].every((x) => x);
     setState(() {
       _tries++;
       if (ok) {
@@ -599,25 +744,14 @@ class _BuildDrillViewState extends State<BuildDrillView> {
         color: dragging ? scheme.surfaceContainerHighest : scheme.surface,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: wrong
-              ? scheme.error
-              : (placed ? scheme.primary.withValues(alpha: 0.6) : scheme.outlineVariant),
+          color: wrong ? scheme.error : (placed ? scheme.primary.withValues(alpha: 0.6) : scheme.outlineVariant),
           width: wrong ? 2.5 : 1.5,
         ),
         boxShadow: dragging
-            ? [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.2),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
-                ),
-              ]
+            ? [BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 8, offset: const Offset(0, 3))]
             : null,
       ),
-      child: Text(
-        _pool[i].text,
-        style: englishStyle(context, size: 18).copyWith(fontWeight: FontWeight.w600),
-      ),
+      child: Text(_pool[i].text, style: englishStyle(context, size: 18).copyWith(fontWeight: FontWeight.w600)),
     );
   }
 
@@ -706,15 +840,19 @@ class _BuildDrillViewState extends State<BuildDrillView> {
             runSpacing: 6,
             children: [
               for (final a in d.answer)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: slotColor(a.slot)),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    a.slot.label,
-                    style: TextStyle(color: slotColor(a.slot), fontWeight: FontWeight.w700, fontSize: 13),
+                InkWell(
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: () => showSlotSheet(context, a.slot),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: slotColor(a.slot)),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '${a.slot.label} · ${a.slot.ask}',
+                      style: TextStyle(color: slotColor(a.slot), fontWeight: FontWeight.w700, fontSize: 13),
+                    ),
                   ),
                 ),
             ],
@@ -730,7 +868,7 @@ class _BuildDrillViewState extends State<BuildDrillView> {
             children: [
               for (final a in d.answer) ChunkBlock(a, big: true),
               Padding(
-                padding: const EdgeInsets.only(bottom: 22),
+                padding: const EdgeInsets.only(bottom: 34),
                 child: Text(d.end, style: englishStyle(context, size: 22)),
               ),
             ],
@@ -751,10 +889,7 @@ class _BuildDrillViewState extends State<BuildDrillView> {
               ),
               child: _placed.isEmpty
                   ? Center(
-                      child: Text(
-                        '여기로 카드를 끌어오거나, 카드를 눌러 넣으세요',
-                        style: TextStyle(color: scheme.onSurfaceVariant),
-                      ),
+                      child: Text('여기로 카드를 끌어오거나, 카드를 눌러 넣으세요', style: TextStyle(color: scheme.onSurfaceVariant)),
                     )
                   : Wrap(
                       runSpacing: 8,
@@ -780,11 +915,7 @@ class _BuildDrillViewState extends State<BuildDrillView> {
             child: Text(_message!, style: text.bodyMedium),
           ),
         if (!_solved) ...[
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [for (final i in unplaced) _draggable(context, i, placed: false)],
-          ),
+          Wrap(spacing: 8, runSpacing: 8, children: [for (final i in unplaced) _draggable(context, i, placed: false)]),
           const SizedBox(height: 12),
           Row(
             children: [
@@ -795,8 +926,7 @@ class _BuildDrillViewState extends State<BuildDrillView> {
                 onPressed: () => setState(() => _showGuide = !_showGuide),
               ),
               const SizedBox(width: 8),
-              if (_placed.isNotEmpty)
-                TextButton(onPressed: () => _changed(_placed.clear), child: const Text('다시 놓기')),
+              if (_placed.isNotEmpty) TextButton(onPressed: () => _changed(_placed.clear), child: const Text('다시 놓기')),
               const Spacer(),
               FilledButton.icon(
                 icon: const Icon(Icons.check_rounded),
@@ -815,10 +945,7 @@ class _BuildDrillViewState extends State<BuildDrillView> {
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: good.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(16),
-            ),
+            decoration: BoxDecoration(color: good.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(16)),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -835,10 +962,7 @@ class _BuildDrillViewState extends State<BuildDrillView> {
                 const SizedBox(height: 6),
                 Text(d.en, style: englishStyle(context, size: 20).copyWith(fontWeight: FontWeight.w600)),
                 PronText(d.en, size: 15),
-                if (d.note != null) ...[
-                  const SizedBox(height: 6),
-                  Text('📌 ${d.note}', style: text.bodyMedium),
-                ],
+                if (d.note != null) ...[const SizedBox(height: 6), Text('📌 ${d.note}', style: text.bodyMedium)],
                 const SizedBox(height: 10),
                 Text('소리 내서 말해 보세요', style: text.labelMedium?.copyWith(color: scheme.onSurfaceVariant)),
                 const SizedBox(height: 6),
@@ -916,9 +1040,7 @@ class _PickDrillViewState extends State<PickDrillView> {
               ChoiceChip(
                 label: Text(o, style: englishStyle(context, size: 18)),
                 selected: _picked == o,
-                selectedColor: o == d.answer
-                    ? good.withValues(alpha: 0.2)
-                    : scheme.error.withValues(alpha: 0.15),
+                selectedColor: o == d.answer ? good.withValues(alpha: 0.2) : scheme.error.withValues(alpha: 0.15),
                 onSelected: (_) => _pick(o),
               ),
           ],

@@ -34,6 +34,19 @@ void main() {
         }
       }
     });
+    test('칸마다 질문·문법 이름·설명이 있고, 예문에 그 칸이 들어 있다', () {
+      for (final s in Slot.values) {
+        expect(s.ask, isNotEmpty);
+        expect(s.grammar, isNotEmpty);
+        expect(s.explain.length, greaterThan(40));
+        expect(s.samples, isNotEmpty);
+        expect(s.samples.any((x) => parseChunks(x).any((c) => c.slot == s)), isTrue, reason: s.name);
+      }
+    });
+    test('-ing · want to · have to 레슨이 있다', () {
+      final ids = basicsLessons.map((l) => l.id);
+      expect(ids, containsAll(['ing', 'want', 'have']));
+    });
     test('문장 만들기', () {
       expect(joinChunks(parseChunks('q:What|h:do|w:you|a:like'), '?'), 'What do you like?');
       expect(parseChunks('a:likes~이유').single.tip, '이유');
@@ -45,10 +58,16 @@ void main() {
     await AppState.instance.load();
     final drill = BuildDrill('그는 버스를 타요.', 'w:He|a:takes|o:the bus', wrong: 'a:take~-s가 붙어요');
     var solved = false;
-    await tester.pumpWidget(MaterialApp(
-      theme: buildTheme(Brightness.light),
-      home: Scaffold(body: SingleChildScrollView(child: BuildDrillView(drill: drill, onSolved: () => solved = true))),
-    ));
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildTheme(Brightness.light),
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: BuildDrillView(drill: drill, onSolved: () => solved = true),
+          ),
+        ),
+      ),
+    );
     // 칸 이름은 처음엔 안 보인다(답을 보고 따라 하지 않게)
     expect(find.text('누가'), findsNothing);
     // 순서 틀리게 놓고 확인
@@ -89,10 +108,16 @@ void main() {
     await AppState.instance.load();
     final drill = BuildDrill('나는 커피를 좋아해요.', 'w:I|a:like|o:coffee');
     var solved = false;
-    await tester.pumpWidget(MaterialApp(
-      theme: buildTheme(Brightness.light),
-      home: Scaffold(body: SingleChildScrollView(child: BuildDrillView(drill: drill, onSolved: () => solved = true))),
-    ));
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildTheme(Brightness.light),
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: BuildDrillView(drill: drill, onSolved: () => solved = true),
+          ),
+        ),
+      ),
+    );
     await tester.tap(find.text('I'));
     await tester.tap(find.text('coffee'));
     await tester.pump();
@@ -115,10 +140,16 @@ void main() {
     await AppState.instance.load();
     final drill = BuildDrill('나는 커피를 좋아해요.', 'w:I|a:like|o:coffee');
     var solved = false;
-    await tester.pumpWidget(MaterialApp(
-      theme: buildTheme(Brightness.light),
-      home: Scaffold(body: SingleChildScrollView(child: BuildDrillView(drill: drill, onSolved: () => solved = true))),
-    ));
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildTheme(Brightness.light),
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: BuildDrillView(drill: drill, onSolved: () => solved = true),
+          ),
+        ),
+      ),
+    );
     await tester.tap(find.text('I'));
     await tester.tap(find.text('coffee'));
     await tester.pump();
@@ -140,6 +171,8 @@ void main() {
     await tester.pumpWidget(MaterialApp(theme: buildTheme(Brightness.light), home: const BasicsHomeScreen()));
     expect(find.text('영어 문장 지도'), findsWidgets);
     await tester.scrollUntilVisible(find.text('be동사: ~이다, ~에 있다'), 300);
+    await tester.ensureVisible(find.text('be동사: ~이다, ~에 있다'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('be동사: ~이다, ~에 있다'));
     await tester.pumpAndSettle();
     final lesson = basicsLessons.firstWhere((l) => l.id == 'be');
@@ -159,5 +192,25 @@ void main() {
     }
     expect(find.textContaining('완료!'), findsOneWidget);
     expect(AppState.instance.doneBasics, contains('be'));
+  });
+
+  testWidgets('칸 사전: 누르면 쉬운 설명과 학교 문법 이름이 나온다', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await AppState.instance.load();
+    await tester.pumpWidget(MaterialApp(theme: buildTheme(Brightness.light), home: const BasicsHomeScreen()));
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('slotRow-m')), 200);
+    await tester.ensureVisible(find.byKey(const ValueKey('slotRow-m')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('slotRow-m')));
+    await tester.pumpAndSettle();
+    expect(find.text('어디서·언제·어떻게?'), findsWidgets);
+    expect(find.textContaining('부사 · 부사구(전치사구)', findRichText: true), findsOneWidget);
+    expect(find.textContaining('추가 정보 스티커'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('I play soccer in the park.'),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    expect(find.text('I play soccer in the park.'), findsOneWidget);
   });
 }
