@@ -139,11 +139,12 @@ void main() {
     await AppState.instance.load();
     await tester.pumpWidget(MaterialApp(theme: buildTheme(Brightness.light), home: const BasicsHomeScreen()));
     expect(find.text('영어 문장 지도'), findsWidgets);
+    await tester.scrollUntilVisible(find.text('be동사: ~이다, ~에 있다'), 300);
     await tester.tap(find.text('be동사: ~이다, ~에 있다'));
     await tester.pumpAndSettle();
     final lesson = basicsLessons.firstWhere((l) => l.id == 'be');
     for (var i = 0; i < lesson.concepts.length; i++) {
-      await tester.tap(find.text(i == lesson.concepts.length - 1 ? '카드 문제 풀기 ▶' : '다음'));
+      await tester.tap(find.text(i == lesson.concepts.length - 1 ? '튜토리얼 끝 · 카드 문제 시작 ▶' : '다음'));
       await tester.pumpAndSettle();
     }
     for (final d in lesson.drills.cast<BuildDrill>()) {

@@ -142,6 +142,31 @@ class BasicsHomeScreen extends StatelessWidget {
                 '앞에 무엇이 오느냐(Can, Do, What, How…)에 따라 뒤가 어떻게 바뀌는지 카드를 끼우며 익혀요.',
                 style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
               ),
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: scheme.primaryContainer.withValues(alpha: 0.35),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Text.rich(
+                  const TextSpan(
+                    children: [
+                      TextSpan(
+                        text: '레슨 진행 방법\n',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      TextSpan(
+                        text:
+                            '① 튜토리얼: 규칙과 예문을 먼저 봐요(1~2쪽)\n'
+                            '② 카드 문제: 카드를 끌어다 직접 문장을 만들고 "확인"\n'
+                            '③ 완료: 오늘 익힌 규칙 정리',
+                      ),
+                    ],
+                  ),
+                  style: text.bodyMedium,
+                ),
+              ),
               const SizedBox(height: 14),
               Card(
                 child: Padding(
@@ -258,6 +283,7 @@ class _LessonScreenState extends State<LessonScreen> {
         page: _step + 1,
         pages: c,
         drills: lesson.drills.length,
+        onSkip: () => setState(() => _step = c),
       );
     } else if (_step < c + lesson.drills.length) {
       final drill = lesson.drills[_step - c];
@@ -281,6 +307,11 @@ class _LessonScreenState extends State<LessonScreen> {
       body: SafeArea(
         child: Column(
           children: [
+            _StageBar(
+              stage: _step < c ? 0 : (_step < c + lesson.drills.length ? 1 : 2),
+              tutorial: '${math.min(_step + 1, c)}/$c',
+              drills: '${(_step - c + 1).clamp(0, lesson.drills.length)}/${lesson.drills.length}',
+            ),
             Expanded(
               child: SingleChildScrollView(padding: const EdgeInsets.all(16), child: body),
             ),
@@ -306,7 +337,9 @@ class _LessonScreenState extends State<LessonScreen> {
                       onPressed: _canNext ? _next : null,
                       style: FilledButton.styleFrom(backgroundColor: _canNext ? scheme.primary : null),
                       child: Text(
-                        last ? '목록으로' : (_step == c - 1 ? '카드 문제 풀기 ▶' : (_canNext ? '다음' : '문제를 풀어 보세요')),
+                        last
+                            ? '목록으로'
+                            : (_step == c - 1 ? '튜토리얼 끝 · 카드 문제 시작 ▶' : (_canNext ? '다음' : '문제를 풀어 보세요')),
                       ),
                     ),
                 ],
@@ -319,12 +352,71 @@ class _LessonScreenState extends State<LessonScreen> {
   }
 }
 
+/// 레슨 단계 표시: ① 튜토리얼 → ② 카드 문제 → ③ 완료
+class _StageBar extends StatelessWidget {
+  const _StageBar({required this.stage, required this.tutorial, required this.drills});
+  final int stage;
+  final String tutorial;
+  final String drills;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    Widget step(int i, String label, String? count) {
+      final on = i == stage, done = i < stage;
+      final color = on ? scheme.primary : (done ? AppColors.of(context).good : scheme.outline);
+      return Expanded(
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: on ? scheme.primary.withValues(alpha: 0.1) : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Column(
+            children: [
+              Text(
+                '${done ? '✓' : '${i + 1}'} $label',
+                style: TextStyle(
+                  fontWeight: on ? FontWeight.w800 : FontWeight.w600,
+                  color: color,
+                  fontSize: 13,
+                ),
+              ),
+              if (count != null && on) Text(count, style: TextStyle(fontSize: 11, color: color)),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      child: Row(
+        children: [
+          step(0, '튜토리얼', tutorial),
+          Icon(Icons.chevron_right_rounded, size: 16, color: scheme.outline),
+          step(1, '카드 문제', drills),
+          Icon(Icons.chevron_right_rounded, size: 16, color: scheme.outline),
+          step(2, '완료', null),
+        ],
+      ),
+    );
+  }
+}
+
 class _ConceptView extends StatelessWidget {
-  const _ConceptView({required this.concept, required this.page, required this.pages, required this.drills});
+  const _ConceptView({
+    required this.concept,
+    required this.page,
+    required this.pages,
+    required this.drills,
+    required this.onSkip,
+  });
   final Concept concept;
   final int page;
   final int pages;
   final int drills;
+  final VoidCallback onSkip;
 
   @override
   Widget build(BuildContext context) {
@@ -343,14 +435,25 @@ class _ConceptView extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Icon(Icons.pan_tool_alt_rounded, size: 18, color: scheme.tertiary),
+              Icon(Icons.school_rounded, size: 20, color: scheme.tertiary),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(
-                  '설명 $page/$pages · 설명을 읽고 나면 카드 문제 $drills개가 나와요. 카드를 끌어다 직접 문장을 만들어요.',
+                child: Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(
+                        text: '튜토리얼 $page/$pages\n',
+                        style: TextStyle(fontWeight: FontWeight.w700, color: scheme.tertiary),
+                      ),
+                      TextSpan(
+                        text: '규칙을 먼저 훑어봐요. 예문은 눌러서 들을 수 있어요(끌어지지 않아요). 다 읽으면 카드 문제 $drills개를 직접 풀어요.',
+                      ),
+                    ],
+                  ),
                   style: text.bodySmall,
                 ),
               ),
+              TextButton(onPressed: onSkip, child: const Text('건너뛰기')),
             ],
           ),
         ),
