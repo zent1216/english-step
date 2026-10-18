@@ -40,7 +40,7 @@ void main() {
     });
   });
 
-  testWidgets('조립 문제: 순서대로 누르면 완성, 오답은 이유를 보여준다', (tester) async {
+  testWidgets('조립 문제: 카드를 놓고 확인하면 채점, 틀리면 이유를 보여준다', (tester) async {
     SharedPreferences.setMockInitialValues({});
     await AppState.instance.load();
     final drill = BuildDrill('그는 버스를 타요.', 'w:He|a:takes|o:the bus', wrong: 'a:take~-s가 붙어요');
@@ -49,21 +49,89 @@ void main() {
       theme: buildTheme(Brightness.light),
       home: Scaffold(body: SingleChildScrollView(child: BuildDrillView(drill: drill, onSolved: () => solved = true))),
     ));
-    await tester.tap(find.widgetWithText(ActionChip, 'takes'));
+    // 칸 이름은 처음엔 안 보인다(답을 보고 따라 하지 않게)
+    expect(find.text('누가'), findsNothing);
+    // 순서 틀리게 놓고 확인
+    await tester.tap(find.text('takes'));
+    await tester.tap(find.text('He'));
+    await tester.tap(find.text('the bus'));
     await tester.pump();
-    expect(find.textContaining('지금은 ‘누가’ 자리'), findsOneWidget);
-    await tester.tap(find.widgetWithText(ActionChip, 'He'));
+    await tester.tap(find.text('확인'));
     await tester.pump();
-    await tester.tap(find.widgetWithText(ActionChip, 'take'));
+    expect(find.textContaining('1번째 자리에는 ‘누가’'), findsOneWidget);
+    expect(solved, isFalse);
+    // 다시 놓기 → 오답 카드 넣고 확인
+    await tester.tap(find.text('다시 놓기'));
     await tester.pump();
-    expect(find.text('-s가 붙어요'), findsOneWidget);
-    await tester.tap(find.widgetWithText(ActionChip, 'takes'));
+    for (final t in ['He', 'take', 'the bus']) {
+      await tester.tap(find.text(t));
+    }
     await tester.pump();
-    await tester.tap(find.widgetWithText(ActionChip, 'the bus'));
+    await tester.tap(find.text('확인'));
+    await tester.pump();
+    expect(find.textContaining('-s가 붙어요'), findsOneWidget);
+    // 정답
+    await tester.tap(find.text('다시 놓기'));
+    await tester.pump();
+    for (final t in ['He', 'takes', 'the bus']) {
+      await tester.tap(find.text(t));
+    }
+    await tester.pump();
+    await tester.tap(find.text('확인'));
     await tester.pump();
     expect(solved, isTrue);
-    expect(find.text('맞았어요!'), findsOneWidget);
     expect(find.text('He takes the bus.'), findsOneWidget);
+    expect(find.text('누가'), findsOneWidget); // 맞히면 색깔 칸으로 구조를 보여준다
+  });
+
+  testWidgets('끌어다 사이에 끼우기', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await AppState.instance.load();
+    final drill = BuildDrill('나는 커피를 좋아해요.', 'w:I|a:like|o:coffee');
+    var solved = false;
+    await tester.pumpWidget(MaterialApp(
+      theme: buildTheme(Brightness.light),
+      home: Scaffold(body: SingleChildScrollView(child: BuildDrillView(drill: drill, onSolved: () => solved = true))),
+    ));
+    await tester.tap(find.text('I'));
+    await tester.tap(find.text('coffee'));
+    await tester.pump();
+    // like를 I와 coffee 사이(coffee 왼쪽)로 끌어다 놓기
+    final target = tester.getTopLeft(find.text('coffee')) - const Offset(22, -10);
+    final g = await tester.startGesture(tester.getCenter(find.text('like')));
+    await g.moveBy(const Offset(5, 5));
+    await tester.pump();
+    await g.moveTo(target);
+    await tester.pump();
+    await g.up();
+    await tester.pump();
+    await tester.tap(find.text('확인'));
+    await tester.pump();
+    expect(solved, isTrue);
+  });
+
+  testWidgets('놓인 카드 위에 떨어뜨려도 끼워진다(왼쪽 절반 → 앞)', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await AppState.instance.load();
+    final drill = BuildDrill('나는 커피를 좋아해요.', 'w:I|a:like|o:coffee');
+    var solved = false;
+    await tester.pumpWidget(MaterialApp(
+      theme: buildTheme(Brightness.light),
+      home: Scaffold(body: SingleChildScrollView(child: BuildDrillView(drill: drill, onSolved: () => solved = true))),
+    ));
+    await tester.tap(find.text('I'));
+    await tester.tap(find.text('coffee'));
+    await tester.pump();
+    final g = await tester.startGesture(tester.getCenter(find.text('like')));
+    await g.moveBy(const Offset(5, 5));
+    await tester.pump();
+    await g.moveTo(tester.getTopLeft(find.text('coffee')) + const Offset(2, 5));
+    await tester.pump();
+    await g.up();
+    await tester.pump();
+    await tester.tap(find.text('확인'));
+    await tester.pump();
+    expect(solved, isTrue);
   });
 
   testWidgets('레슨을 끝까지 가면 완료 처리', (tester) async {
@@ -74,17 +142,17 @@ void main() {
     await tester.tap(find.text('be동사: ~이다, ~에 있다'));
     await tester.pumpAndSettle();
     final lesson = basicsLessons.firstWhere((l) => l.id == 'be');
-    // 설명 카드 넘기기
     for (var i = 0; i < lesson.concepts.length; i++) {
       await tester.tap(find.text('다음'));
       await tester.pumpAndSettle();
     }
-    // 조립 문제 풀기
     for (final d in lesson.drills.cast<BuildDrill>()) {
       for (final c in d.answer) {
-        await tester.tap(find.widgetWithText(ActionChip, c.text));
+        await tester.tap(find.text(c.text));
         await tester.pump();
       }
+      await tester.tap(find.text('확인'));
+      await tester.pump();
       await tester.tap(find.text('다음'));
       await tester.pumpAndSettle();
     }

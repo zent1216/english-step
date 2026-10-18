@@ -299,7 +299,7 @@ class _LessonScreenState extends State<LessonScreen> {
                     FilledButton(
                       onPressed: _canNext ? _next : null,
                       style: FilledButton.styleFrom(backgroundColor: _canNext ? scheme.primary : null),
-                      child: Text(last ? '목록으로' : (_canNext ? '다음' : '카드를 끼워 보세요')),
+                      child: Text(last ? '목록으로' : (_canNext ? '다음' : '문제를 풀어 보세요')),
                     ),
                 ],
               ),
@@ -368,7 +368,8 @@ class _ConceptView extends StatelessWidget {
   }
 }
 
-/// 조립 문제: 칸 순서대로 조각 카드를 눌러 끼운다.
+/// 조립 문제: 카드를 끌어다(또는 눌러서) 문장 줄에 놓고, 다 놓으면 "확인".
+/// 칸 이름·색은 숨긴다(답을 보고 따라 하지 않게). 다 맞히면 그때 색깔 칸으로 구조를 보여준다.
 class BuildDrillView extends StatefulWidget {
   const BuildDrillView({super.key, required this.drill, required this.onSolved});
   final BuildDrill drill;
@@ -380,14 +381,16 @@ class BuildDrillView extends StatefulWidget {
 
 class _BuildDrillViewState extends State<BuildDrillView> {
   late final List<Chunk> _pool;
-  final _used = <int>{};
-  int _filled = 0;
+  final _placed = <int>[]; // 문장 줄에 놓인 카드(풀 번호) 순서
+  Set<int> _wrongPos = {}; // 확인 후 틀린 자리
+  bool _solved = false;
+  bool _showGuide = false; // 힌트: 칸 안내 보기
   String? _message;
   bool _messageBad = false;
-  int? _hint;
+  int _tries = 0;
+  final _cardKeys = <int, GlobalKey>{};
 
   BuildDrill get d => widget.drill;
-  bool get _done => _filled == d.answer.length;
 
   @override
   void initState() {
@@ -395,64 +398,162 @@ class _BuildDrillViewState extends State<BuildDrillView> {
     _pool = [...d.answer, ...d.wrong]..shuffle(math.Random(d.ko.hashCode));
   }
 
-  void _tap(int i) {
-    if (_done || _used.contains(i)) return;
-    final c = _pool[i];
-    final want = d.answer[_filled];
+  void _changed(VoidCallback f) {
+    if (_solved) return;
     setState(() {
-      _hint = null;
-      if (c.text == want.text && c.tip == null) {
-        _used.add(i);
-        _filled++;
-        _message = null;
-        if (_done) {
-          _say(d.en);
-          widget.onSolved();
-        }
-      } else if (c.tip != null) {
-        _message = c.tip;
-        _messageBad = true;
-      } else if (d.answer.skip(_filled).any((a) => a.text == c.text)) {
-        _message = '‘${c.text}’는 맞는 조각이에요. 그런데 지금은 ‘${want.slot.label}’ 자리예요.';
-        _messageBad = false;
-      } else {
-        _message = '지금은 ‘${want.slot.label}’ 자리예요.';
-        _messageBad = true;
-      }
+      f();
+      _wrongPos = {};
+      _message = null;
     });
   }
 
-  void _showHint() {
-    final want = d.answer[_filled];
-    final i = [
-      for (var k = 0; k < _pool.length; k++) k,
-    ].firstWhere((k) => !_used.contains(k) && _pool[k].text == want.text && _pool[k].tip == null);
+  void _add(int i) => _changed(() => _placed.add(i));
+  void _remove(int i) => _changed(() => _placed.remove(i));
+  void _insert(int i, int at) => _changed(() {
+    final from = _placed.indexOf(i);
+    if (from >= 0) {
+      _placed.removeAt(from);
+      if (from < at) at--;
+    }
+    _placed.insert(at.clamp(0, _placed.length), i);
+  });
+
+  void _check() {
+    final got = [for (final i in _placed) _pool[i]];
+    final ok =
+        got.length == d.answer.length &&
+        [
+          for (var k = 0; k < got.length; k++) got[k].tip == null && got[k].text == d.answer[k].text,
+        ].every((x) => x);
     setState(() {
-      _hint = i;
-      _message = '‘${want.slot.label}’ 자리: ${want.slot.help}';
-      _messageBad = false;
+      _tries++;
+      if (ok) {
+        _solved = true;
+        _message = null;
+        _say(d.en);
+        widget.onSolved();
+        return;
+      }
+      _wrongPos = {
+        for (var k = 0; k < got.length; k++)
+          if (got[k].tip != null || k >= d.answer.length || got[k].text != d.answer[k].text) k,
+      };
+      _messageBad = true;
+      final trap = got.where((c) => c.tip != null).toList();
+      if (trap.isNotEmpty) {
+        _message = '‘${trap.first.text}’: ${trap.first.tip}';
+      } else if (got.length < d.answer.length) {
+        final missing = d.answer.where((a) => !got.any((g) => g.text == a.text)).map((a) => a.slot.label);
+        _message = '조각이 아직 남았어요. 빠진 자리: ${missing.toSet().join(', ')}';
+      } else {
+        final k = _wrongPos.first;
+        final want = d.answer[k].slot;
+        _message = '${k + 1}번째 자리에는 ‘${want.label}’이 와야 해요. (${want.help})';
+      }
+      if (_tries >= 2 && !_showGuide) _message = '${_message!}\n막히면 아래 ‘힌트’로 칸 안내를 볼 수 있어요.';
     });
   }
+
+  Widget _card(BuildContext context, int i, {bool placed = false, bool dragging = false}) {
+    final scheme = Theme.of(context).colorScheme;
+    final pos = _placed.indexOf(i);
+    final wrong = placed && _wrongPos.contains(pos);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: dragging ? scheme.surfaceContainerHighest : scheme.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: wrong
+              ? scheme.error
+              : (placed ? scheme.primary.withValues(alpha: 0.6) : scheme.outlineVariant),
+          width: wrong ? 2.5 : 1.5,
+        ),
+        boxShadow: dragging
+            ? [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ]
+            : null,
+      ),
+      child: Text(
+        _pool[i].text,
+        style: englishStyle(context, size: 18).copyWith(fontWeight: FontWeight.w600),
+      ),
+    );
+  }
+
+  Widget _draggable(BuildContext context, int i, {required bool placed}) {
+    return Draggable<int>(
+      data: i,
+      feedback: Material(color: Colors.transparent, child: _card(context, i, dragging: true)),
+      childWhenDragging: Opacity(opacity: 0.3, child: _card(context, i, placed: placed)),
+      child: GestureDetector(
+        onTap: () => placed ? _remove(i) : _add(i),
+        child: _card(context, i, placed: placed),
+      ),
+    );
+  }
+
+  /// 놓인 카드 위에 떨어뜨려도 끼운다: 카드 왼쪽 절반이면 앞에, 오른쪽 절반이면 뒤에.
+  Widget _dropOnCard(int k) => DragTarget<int>(
+        onAcceptWithDetails: (det) {
+          final box = context.findRenderObject();
+          final key = _cardKeys[_placed[k]];
+          final cardBox = key?.currentContext?.findRenderObject() as RenderBox?;
+          var at = k + 1;
+          if (box != null && cardBox != null) {
+            final center = cardBox.localToGlobal(cardBox.size.center(Offset.zero)).dx;
+            if (det.offset.dx + 24 < center) at = k;
+          }
+          if (det.data != _placed[k]) _insert(det.data, at);
+        },
+        builder: (context, cand, _) => KeyedSubtree(
+          key: _cardKeys.putIfAbsent(_placed[k], () => GlobalKey()),
+          child: _draggable(context, _placed[k], placed: true),
+        ),
+      );
+
+  /// 카드 사이 끼워 넣는 자리
+  Widget _gap(int at) => DragTarget<int>(
+    onAcceptWithDetails: (det) => _insert(det.data, at),
+    builder: (context, cand, _) {
+      final on = cand.isNotEmpty;
+      return AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
+        width: on ? 28 : 10,
+        height: 46,
+        margin: const EdgeInsets.symmetric(horizontal: 1),
+        decoration: BoxDecoration(
+          color: on ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.25) : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+        ),
+      );
+    },
+  );
 
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final scheme = Theme.of(context).colorScheme;
     final good = AppColors.of(context).good;
+    final unplaced = [
+      for (var i = 0; i < _pool.length; i++)
+        if (!_placed.contains(i)) i,
+    ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          d.from != null ? '바꿔 말해 보세요' : '영어로 조립해 보세요',
+          d.from != null ? '바꿔 말해 보세요' : '카드를 끌어다 문장을 만들어 보세요',
           style: text.labelLarge?.copyWith(color: scheme.tertiary),
         ),
         const SizedBox(height: 6),
         if (d.from != null) ...[
-          Wrap(
-            spacing: 6,
-            runSpacing: 8,
-            children: [for (final ch in d.from!) ChunkBlock(ch, showLabel: true)],
-          ),
+          Wrap(spacing: 6, runSpacing: 8, children: [for (final ch in d.from!) ChunkBlock(ch)]),
           const SizedBox(height: 4),
           Text(joinChunks(d.from!, d.fromEnd), style: TextStyle(color: scheme.onSurfaceVariant)),
           Padding(
@@ -461,24 +562,80 @@ class _BuildDrillViewState extends State<BuildDrillView> {
           ),
         ],
         Text(d.ko, style: text.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
-        const SizedBox(height: 16),
-        // 칸들
-        Wrap(
-          spacing: 6,
-          runSpacing: 10,
-          crossAxisAlignment: WrapCrossAlignment.end,
-          children: [
-            for (var k = 0; k < d.answer.length; k++)
-              k < _filled
-                  ? ChunkBlock(d.answer[k], big: true)
-                  : _EmptySlot(slot: d.answer[k].slot, active: k == _filled),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 22),
-              child: Text(d.end, style: englishStyle(context, size: 22)),
-            ),
-          ],
-        ),
         const SizedBox(height: 14),
+        if (_showGuide && !_solved) ...[
+          Text('칸 안내', style: text.labelMedium?.copyWith(color: scheme.onSurfaceVariant)),
+          const SizedBox(height: 4),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              for (final a in d.answer)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: slotColor(a.slot)),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    a.slot.label,
+                    style: TextStyle(color: slotColor(a.slot), fontWeight: FontWeight.w700, fontSize: 13),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+        ],
+        // 문장 줄
+        if (_solved)
+          Wrap(
+            spacing: 6,
+            runSpacing: 10,
+            crossAxisAlignment: WrapCrossAlignment.end,
+            children: [
+              for (final a in d.answer) ChunkBlock(a, big: true),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 22),
+                child: Text(d.end, style: englishStyle(context, size: 22)),
+              ),
+            ],
+          )
+        else
+          DragTarget<int>(
+            onAcceptWithDetails: (det) => _insert(det.data, _placed.length),
+            builder: (context, cand, _) => Container(
+              width: double.infinity,
+              constraints: const BoxConstraints(minHeight: 70),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
+              decoration: BoxDecoration(
+                color: cand.isNotEmpty
+                    ? scheme.primary.withValues(alpha: 0.06)
+                    : scheme.surfaceContainerHighest.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: scheme.outlineVariant),
+              ),
+              child: _placed.isEmpty
+                  ? Center(
+                      child: Text(
+                        '여기로 카드를 끌어오거나, 카드를 눌러 넣으세요',
+                        style: TextStyle(color: scheme.onSurfaceVariant),
+                      ),
+                    )
+                  : Wrap(
+                      runSpacing: 8,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        for (var k = 0; k < _placed.length; k++) ...[
+                          _gap(k),
+                          _dropOnCard(k),
+                        ],
+                        _gap(_placed.length),
+                        Text(d.end, style: englishStyle(context, size: 22)),
+                      ],
+                    ),
+            ),
+          ),
+        const SizedBox(height: 12),
         if (_message != null)
           Container(
             width: double.infinity,
@@ -490,32 +647,39 @@ class _BuildDrillViewState extends State<BuildDrillView> {
             ),
             child: Text(_message!, style: text.bodyMedium),
           ),
-        if (!_done) ...[
+        if (!_solved) ...[
           Wrap(
             spacing: 8,
             runSpacing: 8,
+            children: [for (final i in unplaced) _draggable(context, i, placed: false)],
+          ),
+          const SizedBox(height: 12),
+          Row(
             children: [
-              for (var i = 0; i < _pool.length; i++)
-                if (!_used.contains(i))
-                  ActionChip(
-                    label: Text(_pool[i].text, style: englishStyle(context, size: 17)),
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-                    side: BorderSide(
-                      color: _hint == i ? scheme.primary : scheme.outlineVariant,
-                      width: _hint == i ? 2.5 : 1,
-                    ),
-                    onPressed: () => _tap(i),
-                  ),
+              TextButton.icon(
+                style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                icon: const Icon(Icons.lightbulb_outline_rounded, size: 18),
+                label: Text(_showGuide ? '칸 안내 숨기기' : '힌트'),
+                onPressed: () => setState(() => _showGuide = !_showGuide),
+              ),
+              const SizedBox(width: 8),
+              if (_placed.isNotEmpty)
+                TextButton(onPressed: () => _changed(_placed.clear), child: const Text('다시 놓기')),
+              const Spacer(),
+              FilledButton.icon(
+                icon: const Icon(Icons.check_rounded),
+                label: const Text('확인'),
+                onPressed: _placed.isEmpty ? null : _check,
+              ),
             ],
           ),
-          const SizedBox(height: 8),
-          TextButton.icon(
-            style: TextButton.styleFrom(padding: EdgeInsets.zero),
-            icon: const Icon(Icons.lightbulb_outline_rounded, size: 18),
-            label: const Text('힌트'),
-            onPressed: _showHint,
+          const SizedBox(height: 4),
+          Text(
+            '카드를 누르면 맨 뒤에 붙고, 놓인 카드를 누르면 빠져요. 끌어서 사이에 끼울 수도 있어요.',
+            style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
           ),
         ] else ...[
+          const SizedBox(height: 4),
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(14),
@@ -531,7 +695,7 @@ class _BuildDrillViewState extends State<BuildDrillView> {
                     Icon(Icons.check_circle_rounded, color: good),
                     const SizedBox(width: 6),
                     Text(
-                      '맞았어요!',
+                      _tries == 1 ? '한 번에 맞았어요!' : '맞았어요!',
                       style: text.titleMedium?.copyWith(color: good, fontWeight: FontWeight.w700),
                     ),
                   ],
@@ -554,43 +718,6 @@ class _BuildDrillViewState extends State<BuildDrillView> {
             ),
           ),
         ],
-      ],
-    );
-  }
-}
-
-class _EmptySlot extends StatelessWidget {
-  const _EmptySlot({required this.slot, required this.active});
-  final Slot slot;
-  final bool active;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = slotColor(slot);
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          width: 64,
-          height: 42,
-          decoration: BoxDecoration(
-            color: active ? c.withValues(alpha: 0.12) : Colors.transparent,
-            border: Border.all(
-              color: c.withValues(alpha: active ? 0.9 : 0.4),
-              width: active ? 2.5 : 1.5,
-            ),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: active ? Icon(Icons.touch_app_rounded, size: 18, color: c) : null,
-        ),
-        Padding(
-          padding: const EdgeInsets.only(top: 3),
-          child: Text(
-            slot.label,
-            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: c),
-          ),
-        ),
       ],
     );
   }

@@ -517,4 +517,174 @@ final basicsLessons = <Lesson>[
       ),
     ],
   ),
+  Lesson(
+    'past',
+    '과거: ~했어요',
+    '한다 → 했다, 도우미는 did',
+    [
+      Concept(
+        '한 일은 한다 자리 모양만 바꿔요',
+        '어제 한 일은 한다 자리의 동사를 과거 모양으로 바꾸면 끝이에요. 대부분 -ed를 붙이고(watch → watched), '
+            '자주 쓰는 동사는 모양이 따로 있어요(go → went, eat → ate, see → saw, have → had). '
+            '"언제"는 맨 뒤 덧붙임 자리(yesterday, last night).',
+        [
+          Example('w:I|a:watched|o:a movie|m:yesterday', '나는 어제 영화를 봤어요.'),
+          Example('w:She|a:went|m:to work|m:early', '그녀는 일찍 출근했어요.'),
+          Example('w:We|a:ate|o:pizza|m:last night', '우리는 어젯밤에 피자를 먹었어요.'),
+        ],
+      ),
+      Concept(
+        '질문·부정은 did가 도맡아요',
+        '과거 질문과 부정은 도우미 did가 과거를 가져가요. 그래서 한다 자리는 원래 모양이에요. '
+            'Did you eat? (O) / Did you ate? (X). 안 했다는 didn\'t + 원래 모양.',
+        [
+          Example('w:I|h:didn\'t|a:eat|o:breakfast', '나는 아침을 안 먹었어요.'),
+          Example('h:Did|w:you|a:sleep|m:well', '잘 잤어요?', end: '?'),
+          Example('q:What|h:did|w:you|a:eat|m:for lunch', '점심에 뭐 먹었어요?', end: '?'),
+        ],
+      ),
+    ],
+    [
+      BuildDrill(
+        '나는 어제 친구를 만났어요.',
+        'w:I|a:met|o:my friend|m:yesterday',
+        wrong: 'a:meet~어제 한 일이라 과거 모양 met이에요',
+      ),
+      BuildDrill(
+        '그는 지난주에 서울에 갔어요.',
+        'w:He|a:went|m:to Seoul|m:last week',
+        wrong: 'a:goed~go의 과거는 went예요(모양이 따로 있는 동사)',
+      ),
+      BuildDrill(
+        '나는 커피를 안 마셨어요.',
+        'w:I|h:didn\'t|a:drink|o:coffee',
+        wrong: 'a:drank~didn\'t가 과거를 가져가서 drink 그대로예요',
+        note: 'did·didn\'t 뒤에는 원래 모양',
+      ),
+      BuildDrill(
+        '잘 잤어요?',
+        'h:Did|w:you|a:sleep|m:well',
+        end: '?',
+        from: 'w:You|a:slept|m:well',
+        wrong: 'a:slept~Did가 과거를 가져가서 sleep 그대로예요',
+      ),
+      BuildDrill(
+        '주말에 뭐 했어요?',
+        'q:What|h:did|w:you|a:do|m:on the weekend',
+        end: '?',
+        wrong: 'a:done~도우미 did가 과거를 가져가서 한다 자리는 원래 모양 do예요',
+      ),
+      PickDrill(
+        '어제 바빴어요?',
+        'you busy yesterday?',
+        ['Did', 'Were'],
+        'Were',
+        'busy는 상태(be 문장)라서 be동사의 과거 Were예요. 과거 be는 다음 레슨에서 더 해요.',
+      ),
+    ],
+  ),
+  Lesson(
+    'was',
+    '과거 be: was · were',
+    '~였어요, ~에 있었어요',
+    [
+      Concept(
+        'am·is → was, are → were',
+        '상태나 있던 곳을 과거로 말할 때는 be동사를 과거로 바꿔요. I·he·she·it은 was, you·we·they는 were. '
+            '질문은 was/were를 앞으로, 부정은 wasn\'t/weren\'t.',
+        [
+          Example('w:I|a:was|o:tired|m:yesterday', '나는 어제 피곤했어요.'),
+          Example('w:They|a:were|m:at home', '그들은 집에 있었어요.'),
+          Example('h:Were|w:you|o:busy', '바빴어요?', end: '?'),
+          Example('q:Where|h:were|w:you', '어디 있었어요?', end: '?'),
+        ],
+      ),
+    ],
+    [
+      BuildDrill('나는 어제 아팠어요.', 'w:I|a:was|o:sick|m:yesterday', wrong: 'a:were~I의 과거 be는 was예요'),
+      BuildDrill('우리는 늦었어요.', 'w:We|a:were|o:late', wrong: 'a:was~여럿(We)은 were예요'),
+      BuildDrill('영화 재미있었어요?', 'h:Was|w:the movie|o:good', end: '?', wrong: 'h:Did~good은 상태라서 Was예요'),
+      BuildDrill(
+        '어디 있었어요?',
+        'q:Where|h:were|w:you',
+        end: '?',
+        from: 'w:You|a:were|m:at home',
+        note: '궁금한 칸(어디)을 Where로 → were를 앞으로',
+      ),
+      BuildDrill('그건 비싸지 않았어요.', 'w:It|h:wasn\'t|o:expensive', wrong: 'h:didn\'t~expensive는 상태라서 wasn\'t예요'),
+    ],
+  ),
+  Lesson(
+    'will',
+    '미래: will',
+    '~할게요, ~할 거예요',
+    [
+      Concept(
+        'will은 도우미, 뒤는 원래 모양',
+        '앞으로 할 일이나 "~할게요"라는 약속·결심은 도우미 will을 한다 앞에 넣어요. 뒤의 동사는 늘 원래 모양. '
+            '말할 때는 I\'ll처럼 줄여 쓰는 일이 많아요. 안 할 거면 won\'t(= will not).',
+        [
+          Example('w:I|h:will|a:call|o:you|m:later', '이따 전화할게요.'),
+          Example('w:It|h:will|a:rain|m:tomorrow', '내일 비가 올 거예요.'),
+          Example('w:I|h:won\'t|o:be late', '늦지 않을게요.'),
+        ],
+      ),
+      Concept('질문은 Will을 앞으로', '"~할 거예요?"는 Will을 맨 앞으로. 궁금한 칸이 있으면 What·When을 그 앞에.', [
+        Example('h:Will|w:you|a:come|m:tomorrow', '내일 올 거예요?', end: '?'),
+        Example('q:What|h:will|w:you|a:do|m:this weekend', '이번 주말에 뭐 할 거예요?', end: '?'),
+      ]),
+    ],
+    [
+      BuildDrill('내가 도와줄게요.', 'w:I|h:will|a:help|o:you', wrong: 'a:helps~will 뒤는 원래 모양이에요'),
+      BuildDrill('내일 비가 올 거예요.', 'w:It|h:will|a:rain|m:tomorrow', wrong: 'a:rains~will 뒤는 원래 모양이에요'),
+      BuildDrill(
+        '파티에 올 거예요?',
+        'h:Will|w:you|a:come|m:to the party',
+        end: '?',
+        wrong: 'h:Do~앞으로의 일이라 Will이에요',
+      ),
+      BuildDrill('늦지 않을게요.', 'w:I|h:won\'t|o:be late', wrong: 'h:don\'t~앞으로의 약속이라 won\'t예요'),
+      BuildDrill('언제 돌아올 거예요?', 'q:When|h:will|w:you|a:come back', end: '?'),
+    ],
+  ),
+  Lesson(
+    'going',
+    '미래: be going to',
+    '~할 예정이에요(이미 정한 계획)',
+    [
+      Concept(
+        '정해 둔 계획은 am/is/are going to',
+        '이미 마음먹은 계획은 "be going to + 원래 모양"으로 말해요. am·is·are going to를 한 덩어리 도우미로 보면 쉬워요. '
+            'will(지금 정한 것, 약속)과 거의 같지만, going to는 "원래 그럴 계획"이라는 느낌이에요.',
+        [
+          Example('w:I|h:am going to|a:visit|o:my parents|m:this weekend', '이번 주말에 부모님 댁에 갈 거예요.'),
+          Example('w:She|h:is going to|a:start|o:a new job', '그녀는 새 일을 시작할 예정이에요.'),
+        ],
+      ),
+      Concept('질문은 am/is/are를 앞으로', 'be 질문과 똑같이 am·is·are만 앞으로 보내요. → Are you going to ~?', [
+        Example('h:Are|w:you|h:going to|a:buy|o:it', '그거 살 거예요?', end: '?'),
+        Example('q:What|h:are|w:you|h:going to|a:do|m:tomorrow', '내일 뭐 할 거예요?', end: '?'),
+      ]),
+    ],
+    [
+      BuildDrill(
+        '나는 영어를 배울 거예요.',
+        'w:I|h:am going to|a:learn|o:English',
+        wrong: 'a:learning~going to 뒤는 원래 모양이에요',
+      ),
+      BuildDrill(
+        '그는 차를 살 예정이에요.',
+        'w:He|h:is going to|a:buy|o:a car',
+        wrong: 'h:are going to~한 사람(He)은 is예요',
+      ),
+      BuildDrill(
+        '그거 살 거예요?',
+        'h:Are|w:you|h:going to|a:buy|o:it',
+        end: '?',
+        from: 'w:You|h:are going to|a:buy|o:it',
+        note: '질문은 are만 앞으로',
+      ),
+      BuildDrill('내일 뭐 할 거예요?', 'q:What|h:are|w:you|h:going to|a:do|m:tomorrow', end: '?'),
+    ],
+  ),
 ];
