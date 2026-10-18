@@ -143,7 +143,7 @@ void main() {
     await tester.pumpAndSettle();
     final lesson = basicsLessons.firstWhere((l) => l.id == 'be');
     for (var i = 0; i < lesson.concepts.length; i++) {
-      await tester.tap(find.text('다음'));
+      await tester.tap(find.text(i == lesson.concepts.length - 1 ? '카드 문제 풀기 ▶' : '다음'));
       await tester.pumpAndSettle();
     }
     for (final d in lesson.drills.cast<BuildDrill>()) {

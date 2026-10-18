@@ -204,7 +204,8 @@ class _LessonTile extends StatelessWidget {
           child: done ? const Icon(Icons.check_rounded) : Text('${index + 1}'),
         ),
         title: Text(lesson.title, style: const TextStyle(fontWeight: FontWeight.w700)),
-        subtitle: Text(lesson.subtitle),
+        subtitle: Text('${lesson.subtitle}\n카드 문제 ${lesson.drills.length}개'),
+        isThreeLine: true,
         trailing: next ? Chip(label: const Text('다음'), visualDensity: VisualDensity.compact) : null,
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => LessonScreen(index: index))),
       ),
@@ -252,7 +253,12 @@ class _LessonScreenState extends State<LessonScreen> {
     final c = lesson.concepts.length;
     final Widget body;
     if (_step < c) {
-      body = _ConceptView(concept: lesson.concepts[_step]);
+      body = _ConceptView(
+        concept: lesson.concepts[_step],
+        page: _step + 1,
+        pages: c,
+        drills: lesson.drills.length,
+      );
     } else if (_step < c + lesson.drills.length) {
       final drill = lesson.drills[_step - c];
       void onSolved() => setState(() => _solved.add(_step));
@@ -299,7 +305,9 @@ class _LessonScreenState extends State<LessonScreen> {
                     FilledButton(
                       onPressed: _canNext ? _next : null,
                       style: FilledButton.styleFrom(backgroundColor: _canNext ? scheme.primary : null),
-                      child: Text(last ? '목록으로' : (_canNext ? '다음' : '문제를 풀어 보세요')),
+                      child: Text(
+                        last ? '목록으로' : (_step == c - 1 ? '카드 문제 풀기 ▶' : (_canNext ? '다음' : '문제를 풀어 보세요')),
+                      ),
                     ),
                 ],
               ),
@@ -312,8 +320,11 @@ class _LessonScreenState extends State<LessonScreen> {
 }
 
 class _ConceptView extends StatelessWidget {
-  const _ConceptView({required this.concept});
+  const _ConceptView({required this.concept, required this.page, required this.pages, required this.drills});
   final Concept concept;
+  final int page;
+  final int pages;
+  final int drills;
 
   @override
   Widget build(BuildContext context) {
@@ -322,6 +333,27 @@ class _ConceptView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          margin: const EdgeInsets.only(bottom: 14),
+          decoration: BoxDecoration(
+            color: scheme.tertiaryContainer.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.pan_tool_alt_rounded, size: 18, color: scheme.tertiary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '설명 $page/$pages · 설명을 읽고 나면 카드 문제 $drills개가 나와요. 카드를 끌어다 직접 문장을 만들어요.',
+                  style: text.bodySmall,
+                ),
+              ),
+            ],
+          ),
+        ),
         const SentenceMapLegend(compact: true),
         const SizedBox(height: 18),
         Text(concept.title, style: text.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
@@ -500,22 +532,22 @@ class _BuildDrillViewState extends State<BuildDrillView> {
 
   /// 놓인 카드 위에 떨어뜨려도 끼운다: 카드 왼쪽 절반이면 앞에, 오른쪽 절반이면 뒤에.
   Widget _dropOnCard(int k) => DragTarget<int>(
-        onAcceptWithDetails: (det) {
-          final box = context.findRenderObject();
-          final key = _cardKeys[_placed[k]];
-          final cardBox = key?.currentContext?.findRenderObject() as RenderBox?;
-          var at = k + 1;
-          if (box != null && cardBox != null) {
-            final center = cardBox.localToGlobal(cardBox.size.center(Offset.zero)).dx;
-            if (det.offset.dx + 24 < center) at = k;
-          }
-          if (det.data != _placed[k]) _insert(det.data, at);
-        },
-        builder: (context, cand, _) => KeyedSubtree(
-          key: _cardKeys.putIfAbsent(_placed[k], () => GlobalKey()),
-          child: _draggable(context, _placed[k], placed: true),
-        ),
-      );
+    onAcceptWithDetails: (det) {
+      final box = context.findRenderObject();
+      final key = _cardKeys[_placed[k]];
+      final cardBox = key?.currentContext?.findRenderObject() as RenderBox?;
+      var at = k + 1;
+      if (box != null && cardBox != null) {
+        final center = cardBox.localToGlobal(cardBox.size.center(Offset.zero)).dx;
+        if (det.offset.dx + 24 < center) at = k;
+      }
+      if (det.data != _placed[k]) _insert(det.data, at);
+    },
+    builder: (context, cand, _) => KeyedSubtree(
+      key: _cardKeys.putIfAbsent(_placed[k], () => GlobalKey()),
+      child: _draggable(context, _placed[k], placed: true),
+    ),
+  );
 
   /// 카드 사이 끼워 넣는 자리
   Widget _gap(int at) => DragTarget<int>(
@@ -625,10 +657,7 @@ class _BuildDrillViewState extends State<BuildDrillView> {
                       runSpacing: 8,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        for (var k = 0; k < _placed.length; k++) ...[
-                          _gap(k),
-                          _dropOnCard(k),
-                        ],
+                        for (var k = 0; k < _placed.length; k++) ...[_gap(k), _dropOnCard(k)],
                         _gap(_placed.length),
                         Text(d.end, style: englishStyle(context, size: 22)),
                       ],
