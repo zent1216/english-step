@@ -316,4 +316,25 @@
   - 1번 레슨에 튜토리얼 "덧붙임은 빼도 되는 추가 정보"(I play soccer. → + in the park → + on Sundays).
   - 레슨 3개 추가(총 19개): 17 -ing(am/is/are + 동사ing, 질문·부정도 be처럼), 18 want to(+ 원래 모양, 질문·부정은 do),
     19 have to(해야 해요, don't have to = 안 해도 돼요). want to·have to는 한 덩어리 도우미로 다룸.
-  - 한글 발음 메모: on은 CMU 사전(미국식)이 AA N이라 "안"으로 나온다. 미국 발음에 가깝고, "온"은 영국식에 가까움(그대로 둠).
+
+## 한글 발음 미국식 전환 + 단어 설명(미국식 vs 영국식) (2026-10-18)
+- 피드백: "전부 미국식 발음으로, 실제로 그렇게 발음하면 그것에 가깝게". `lib/hangul_pron.dart`:
+  - 굴리는 t(모음 뒤 t + 약모음 → ㄹ): water 워러, better 베러, city 시리, little 리를, computer 컴퓨러.
+  - nt + 약한 어/이 → t 빠짐: twenty 퉤니, center 세너(into처럼 '우' 앞은 그대로).
+  - 끝 p/t/k는 삼켜서 받침: night 나잇, like 라익, meet 밋, sleep 슬립, work 웍(자음+l/r 덩어리는 제외: replied 리플라이드).
+  - 모음 앞 er → ㄹ(every 에버리), s·z·t·d·v 뒤 약한 "언" → "은"(seven 세븐, doesn't 더즌트).
+  - **이어 읽기(연음)**: 쉼표 없이 이어진 "모음+자음 하나"로 끝나는 단어 + 모음으로 시작하는 **짧은 기능어**(`_linkWords`: a, an, I, it, is, at, up…)만 붙임.
+    Can I → 캐나이, have an → 해번, What is it → 와리짓, get up → 게럽, have a nice day → 해버 나이스 데이.
+    내용어(iced, early)·겹자음 끝(walks, doesn't)·r·sh·th·ng는 알아보기 어려워서 안 붙임. 덩어리 안 단어 경계는 `#`.
+  - 약형은 발음기호로(`_weakForms`: a AH0, an AH0 N, of AH0 V, to T AH0 → 터, the 더/모음 앞 디). 혼자면 사전 소리(to 투, an 앤).
+  - 한글 표기 직접 정한 단어(`_overrides`: good 굿, coffee 커피, latte 라테, pizza 피자…)는 이어 읽지 않음. what/was/your는 `_phoneOverrides`(발음기호).
+- **영국식**(`britishPhones`, `HangulPron.compare` → `AccentCompare(us, uk, notes)`): 미국식 발음기호 + 철자로 대략 RP를 만든다.
+  o→짧은 오(`OH`: hot 홋, stop 스톱, want 원트), bath 단어 a→아(`_bathWords`: can't 칸트, ask 아스크), 끝 o → 어우(go 거우),
+  t·d·n 뒤 u → 유(new 뉴, student 스튜든트), -ary 약하게, 굴리는 t 없음, 아예 다른 단어(`_ukOverrides`: tomato, schedule 셰줄, either…).
+  다른 점 설명(한국어): t 소리 / nt / o / a / 끝 o / u / -ary / r(모음 뒤 r: 미국 혀 말기, 영국 소리 안 냄).
+- **모든 단어 누르기**: `MarkedText`가 단어마다 누를 수 있음 → `showWordPracticeSheet`(이름은 그대로, 제목 "단어 설명 · 발음 연습").
+  시트에 `AccentCompareCard`(미국/영국 한글 + 각각 듣기 `Speaker.speak(lang: 'en-GB')`, 영국 목소리 없으면 TTS 설정 안내) 추가.
+  쓰는 곳: 이야기 문장, 기초 예문·정답·칸 설명창 예문, 단어장 목록(누르기) / 팝송 가사·Lv.0 카드(줄·카드 누르기가 따로 있어 **길게 누르기**).
+  단어장 복습 카드는 정답이 보이면 안 되므로 제외.
+- 위젯 테스트에서 `HangulPron.load()`는 `tester.runAsync`로 감쌀 것(가짜 시간 안에서는 compute가 안 끝나 멈춤).
+

@@ -150,7 +150,7 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
           Text(
             _speakMode
                 ? '한국어를 보고 🎤를 눌러 영어로 말해보세요. 카드를 누르면 정답이 보여요.'
-                : '영어를 듣고 뜻을 떠올려 본 뒤, 눌러서 해석을 확인하세요.',
+                : '영어를 듣고 뜻을 떠올려 본 뒤, 눌러서 해석을 확인하세요. 단어를 길게 누르면 단어 설명이 나와요.',
             style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
           const SizedBox(height: 12),
@@ -188,7 +188,7 @@ class _SentencePracticeScreenState extends State<SentencePracticeScreen> {
     final open = _revealed.contains(i);
     final enText = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [Text(s.en, style: englishStyle(context, size: 20)), PronText(s.en)],
+      children: [MarkedText(s.en, size: 20, ko: s.ko, longPress: true), PronText(s.en)],
     );
     final koText = Text(s.ko, style: const TextStyle(fontSize: 16));
     final hidden = Text(

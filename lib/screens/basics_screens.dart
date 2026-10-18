@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../app_state.dart';
 import '../basics/basics_content.dart';
 import '../theme.dart';
+import '../widgets/marked_text.dart';
 import '../widgets/pron_text.dart';
 import '../widgets/speak_check_sheet.dart';
 
@@ -244,7 +245,7 @@ Future<void> showSlotSheet(BuildContext context, Slot slot) {
                           const SizedBox(height: 6),
                           Row(
                             children: [
-                              Expanded(child: Text(en, style: englishStyle(context, size: 16))),
+                              Expanded(child: MarkedText(en, size: 16)),
                               Icon(Icons.volume_up_rounded, size: 20, color: scheme.primary),
                             ],
                           ),
@@ -594,7 +595,10 @@ class _ConceptView extends StatelessWidget {
                         text: '튜토리얼 $page/$pages\n',
                         style: TextStyle(fontWeight: FontWeight.w700, color: scheme.tertiary),
                       ),
-                      TextSpan(text: '규칙을 먼저 훑어봐요. 예문은 눌러서 들을 수 있어요(끌어지지 않아요). 다 읽으면 카드 문제 $drills개를 직접 풀어요.'),
+                      TextSpan(
+                        text:
+                            '규칙을 먼저 훑어봐요. 예문은 눌러서 들을 수 있고(끌어지지 않아요), 영어 단어를 누르면 뜻과 미국식·영국식 발음이 나와요. 다 읽으면 카드 문제 $drills개를 직접 풀어요.',
+                      ),
                     ],
                   ),
                   style: text.bodySmall,
@@ -629,7 +633,7 @@ class _ConceptView extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(e.en, style: englishStyle(context, size: 16)),
+                              MarkedText(e.en, size: 16, ko: e.ko),
                               PronText(e.en),
                               Text(e.ko, style: TextStyle(color: scheme.onSurfaceVariant)),
                             ],
@@ -960,7 +964,11 @@ class _BuildDrillViewState extends State<BuildDrillView> {
                   ],
                 ),
                 const SizedBox(height: 6),
-                Text(d.en, style: englishStyle(context, size: 20).copyWith(fontWeight: FontWeight.w600)),
+                MarkedText(
+                  d.en,
+                  ko: d.ko,
+                  style: englishStyle(context, size: 20).copyWith(fontWeight: FontWeight.w600),
+                ),
                 PronText(d.en, size: 15),
                 if (d.note != null) ...[const SizedBox(height: 6), Text('📌 ${d.note}', style: text.bodyMedium)],
                 const SizedBox(height: 10),
@@ -1059,6 +1067,7 @@ class _PickDrillViewState extends State<PickDrillView> {
         ],
         if (_solved) ...[
           const SizedBox(height: 10),
+          MarkedText(d.en, size: 18, ko: d.ko),
           PronText(d.en, size: 15),
           const SizedBox(height: 8),
           ListenSpeakButtons(d.en, ko: d.ko),

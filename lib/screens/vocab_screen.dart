@@ -4,6 +4,7 @@ import '../app_state.dart';
 import '../models.dart';
 import '../theme.dart';
 import '../widgets/speak_check_sheet.dart';
+import '../widgets/marked_text.dart';
 import '../widgets/pron_text.dart';
 
 /// 단어장: 오늘 복습할 개수, 복습 시작, 전체 목록(듣기/삭제).
@@ -115,7 +116,11 @@ class _VocabTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return ListTile(
-      title: Text(item.word, style: englishStyle(context, size: 17).copyWith(height: 1.3)),
+      title: MarkedText(
+        item.word,
+        ko: item.gloss,
+        style: englishStyle(context, size: 17).copyWith(height: 1.3),
+      ),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [PronText(item.word, size: 13), Text(item.gloss)],

@@ -4,7 +4,7 @@ import '../app_state.dart';
 import '../hangul_pron.dart';
 import '../models.dart';
 
-/// 영어 아래에 붙이는 한글 발음 한 줄("해브 어 나이스 데이"). "한글 발음"을 끄면 안 보인다.
+/// 영어 아래에 붙이는 한글 발음 한 줄("해버 나이스 데이"). "한글 발음"을 끄면 안 보인다.
 class PronText extends StatelessWidget {
   const PronText(this.english, {super.key, this.size = 14, this.textAlign});
   final String english; // `[표현|뜻]` 표시가 있어도 된다

@@ -92,7 +92,7 @@ class _StoryReaderScreenState extends State<StoryReaderScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            '노란 표현을 누르면 뜻이 나와요. 문장 번호를 누르면 해석이 보여요.',
+            '노란 표현을 누르면 뜻이 나와요. 문장 번호를 누르면 해석이 보여요. 다른 단어도 누르면 뜻과 미국식·영국식 발음이 나와요.',
             style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
           ),
           const SizedBox(height: 12),
@@ -147,7 +147,7 @@ class _StoryReaderScreenState extends State<StoryReaderScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  MarkedText(s.en),
+                  MarkedText(s.en, ko: s.ko),
                   PronText(s.en),
                   if (showKo)
                     Padding(

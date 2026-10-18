@@ -1,5 +1,6 @@
-/// 단어 하나 발음 연습(말해보카 방식). 따라 말하기 결과에서 빨간·주황 단어를 누르면 열린다.
+/// 단어 설명 + 발음 연습(말해보카 방식). 영어 문장의 단어를 누르거나, 따라 말하기 결과의 빨간·주황 단어를 누르면 열린다.
 ///
+/// - 미국식·영국식 발음(한글 표기 + 각각 듣기)과 다른 점 설명.
 /// - 열자마자 원어민 소리가 나온다. 보통 / 천천히 듣기.
 /// - 큰 단어 + 뜻(기기 내 번역) + 나온 문장(단어 강조).
 /// - "3번 따라 말하기": 알아들으면(70점 이상) 점이 하나씩 채워진다.
@@ -11,6 +12,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../app_state.dart';
+import '../hangul_pron.dart';
 import '../models.dart';
 import '../pronunciation.dart';
 import '../speech/moonshine.dart';
@@ -224,7 +226,7 @@ class _WordPracticeSheetState extends State<_WordPracticeSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('단어 발음 연습', style: text.labelLarge?.copyWith(color: scheme.tertiary)),
+            Text('단어 설명 · 발음 연습', style: text.labelLarge?.copyWith(color: scheme.tertiary)),
             const SizedBox(height: 6),
             // 큰 단어 + 단어장에 담기
             Row(
@@ -260,6 +262,8 @@ class _WordPracticeSheetState extends State<_WordPracticeSheet> {
                   onPressed: _translate,
                 ),
               ),
+            const SizedBox(height: 14),
+            AccentCompareCard(word: widget.word),
             if (widget.sentence.isNotEmpty) ...[
               const SizedBox(height: 14),
               Container(
@@ -516,6 +520,115 @@ class _WordMic extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// 미국식 vs 영국식 발음 비교 카드(한글 표기, 각각 듣기, 다른 점).
+class AccentCompareCard extends StatefulWidget {
+  const AccentCompareCard({super.key, required this.word});
+  final String word;
+
+  @override
+  State<AccentCompareCard> createState() => _AccentCompareCardState();
+}
+
+class _AccentCompareCardState extends State<AccentCompareCard> {
+  bool? _hasUk;
+
+  @override
+  void initState() {
+    super.initState();
+    Speaker.instance.hasLanguage('en-GB').then((v) {
+      if (mounted) setState(() => _hasUk = v);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    return ListenableBuilder(
+      listenable: HangulPron.instance,
+      builder: (context, _) {
+        final c = HangulPron.instance.compare(widget.word);
+        if (c == null) return const SizedBox.shrink();
+        Widget row(String label, String sub, String hangul, String lang, {bool main = false}) => Row(
+          children: [
+            Container(
+              width: 58,
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              decoration: BoxDecoration(
+                color: (main ? scheme.primary : scheme.tertiary).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: main ? scheme.primary : scheme.tertiary,
+                      fontSize: 13,
+                    ),
+                  ),
+                  Text(sub, style: TextStyle(fontSize: 10, color: scheme.onSurfaceVariant)),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(hangul, style: text.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+            ),
+            IconButton(
+              tooltip: '$label 발음 듣기',
+              icon: const Icon(Icons.volume_up_rounded),
+              onPressed: lang == 'en-GB' && _hasUk == false
+                  ? null
+                  : () => Speaker.instance.speak(widget.word, rate: 0.8, lang: lang).catchError((_) {}),
+            ),
+          ],
+        );
+        return Container(
+          padding: const EdgeInsets.fromLTRB(14, 12, 6, 12),
+          decoration: BoxDecoration(
+            border: Border.all(color: scheme.outlineVariant),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('미국식 vs 영국식', style: text.labelLarge?.copyWith(color: scheme.onSurfaceVariant)),
+              const SizedBox(height: 6),
+              row('미국', '이 앱 기준', c.us, 'en-US', main: true),
+              const SizedBox(height: 4),
+              row('영국', '참고', c.uk, 'en-GB'),
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (c.same)
+                      Text('이 단어는 미국식과 영국식 발음이 거의 같아요.', style: text.bodyMedium)
+                    else
+                      for (final n in c.notes)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Text('• $n', style: text.bodyMedium?.copyWith(height: 1.45)),
+                        ),
+                    if (_hasUk == false)
+                      Text(
+                        '이 폰에는 영국 영어 목소리가 없어요. 설정 → 일반 → 글자 읽어주기(TTS)에서 영어(영국)를 받으면 들을 수 있어요.',
+                        style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

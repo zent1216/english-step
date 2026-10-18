@@ -218,7 +218,7 @@ class _AppInfoSheetState extends State<_AppInfoSheet> {
                 contentPadding: const EdgeInsets.symmetric(horizontal: 4),
                 secondary: const Icon(Icons.translate_rounded),
                 title: const Text('한글 발음 보기'),
-                subtitle: const Text('영어 아래에 "해브 어 나이스 데이"처럼 적어줘요'),
+                subtitle: const Text('영어 아래에 "해버 나이스 데이"처럼 미국식 소리로 적어줘요'),
                 value: AppState.instance.showPron,
                 onChanged: AppState.instance.setShowPron,
               ),

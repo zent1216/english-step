@@ -233,11 +233,28 @@ class Speaker {
   static final Speaker instance = Speaker._();
   final _tts = FlutterTts();
 
+  String _lang = 'en-US';
+
   /// [rate]는 1.0이 보통 속도. flutter_tts는 모바일에서 0.5가 보통 속도라 변환한다.
-  Future<void> speak(String text, {double rate = 1.0}) async {
+  /// [lang]: 'en-US'(미국식, 기본) 또는 'en-GB'(영국식).
+  Future<void> speak(String text, {double rate = 1.0, String lang = 'en-US'}) async {
     await _tts.stop();
+    if (lang != _lang) {
+      await _tts.setLanguage(lang);
+      _lang = lang;
+    }
     await _tts.setSpeechRate(kIsWeb ? rate : rate * 0.5);
     await _tts.speak(plainText(text));
+  }
+
+  /// 이 폰의 음성 엔진에 그 언어(예: 영국 영어 en-GB) 목소리가 있는지.
+  Future<bool> hasLanguage(String lang) async {
+    try {
+      final r = await _tts.isLanguageAvailable(lang);
+      return r == true || r == 1;
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<void> stop() => _tts.stop();

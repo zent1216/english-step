@@ -5,20 +5,36 @@ import '../app_state.dart';
 import '../models.dart';
 import '../theme.dart';
 import 'speak_check_sheet.dart';
+import 'word_practice_sheet.dart';
 import 'pron_text.dart';
 
 /// `[표현|뜻]` 표시가 들어간 영어 문장. 학습 포인트는 형광펜으로 칠하고, 누르면 뜻 바텀시트를 띄운다.
+/// [wordTap]이면 나머지 단어도 하나하나 누를 수 있다 → 단어 설명(뜻·미국식/영국식 발음·따라 말하기) 시트.
 class MarkedText extends StatefulWidget {
-  const MarkedText(this.text, {super.key, this.size = 18});
+  const MarkedText(
+    this.text, {
+    super.key,
+    this.size = 18,
+    this.ko = '',
+    this.wordTap = true,
+    this.longPress = false,
+    this.onBeforeWord,
+    this.style,
+  });
   final String text;
   final double size;
+  final String ko; // 문장 해석(단어 시트에 같이 보여줌)
+  final bool wordTap;
+  final bool longPress; // 줄 전체 누르기가 따로 있는 곳(가사, 카드)은 단어를 길게 눌러야 열림
+  final VoidCallback? onBeforeWord; // 단어 시트를 열기 전(예: 노래 일시정지)
+  final TextStyle? style; // 주면 englishStyle 대신 이 글꼴
 
   @override
   State<MarkedText> createState() => _MarkedTextState();
 }
 
 class _MarkedTextState extends State<MarkedText> {
-  final _recognizers = <TapGestureRecognizer>[];
+  final _recognizers = <OneSequenceGestureRecognizer>[];
 
   void _disposeRecognizers() {
     for (final r in _recognizers) {
@@ -40,7 +56,33 @@ class _MarkedTextState extends State<MarkedText> {
     final spans = <InlineSpan>[];
     for (final s in parseMarked(widget.text)) {
       if (!s.isMarked) {
-        spans.add(TextSpan(text: s.text));
+        if (!widget.wordTap) {
+          spans.add(TextSpan(text: s.text));
+          continue;
+        }
+        // 단어마다 누를 수 있게(문장부호·띄어쓰기는 그대로)
+        for (final m in RegExp(r"[A-Za-z0-9'’]+|[^A-Za-z0-9'’]+").allMatches(s.text)) {
+          final piece = m.group(0)!;
+          if (!RegExp('[A-Za-z]').hasMatch(piece)) {
+            spans.add(TextSpan(text: piece));
+            continue;
+          }
+          void open() {
+            widget.onBeforeWord?.call();
+            showWordPracticeSheet(
+              context,
+              piece.replaceAll('’', "'"),
+              sentence: widget.text,
+              sentenceKo: widget.ko,
+            );
+          }
+
+          final OneSequenceGestureRecognizer r = widget.longPress
+              ? (LongPressGestureRecognizer()..onLongPress = open)
+              : (TapGestureRecognizer()..onTap = open);
+          _recognizers.add(r);
+          spans.add(TextSpan(text: piece, recognizer: r));
+        }
         continue;
       }
       final r = TapGestureRecognizer()
@@ -52,7 +94,9 @@ class _MarkedTextState extends State<MarkedText> {
         style: TextStyle(background: Paint()..color = marker),
       ));
     }
-    return Text.rich(TextSpan(style: englishStyle(context, size: widget.size), children: spans));
+    return Text.rich(
+      TextSpan(style: widget.style ?? englishStyle(context, size: widget.size), children: spans),
+    );
   }
 }
 

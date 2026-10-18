@@ -1,6 +1,8 @@
 import 'package:english_step/app_state.dart';
 import 'package:english_step/main.dart';
+import 'package:english_step/hangul_pron.dart';
 import 'package:english_step/theme.dart';
+import 'package:english_step/widgets/marked_text.dart';
 import 'package:english_step/widgets/word_practice_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -129,4 +131,20 @@ void main() {
     expect(AppState.instance.hasWord('home'), isTrue);
     expect(find.text('담았어요'), findsOneWidget);
   });
-}
+
+  testWidgets('문장 속 단어를 누르면 단어 설명(미국식·영국식 발음 비교)이 열린다', (tester) async {
+    await tester.runAsync(() => HangulPron.instance.load());
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildTheme(Brightness.light),
+        home: const Scaffold(body: MarkedText('I drink water.', ko: '나는 물을 마셔요.')),
+      ),
+    );
+    await tester.tapOnText(find.textRange.ofSubstring('water'));
+    await tester.pumpAndSettle(const Duration(seconds: 1));
+    expect(find.text('미국식 vs 영국식'), findsOneWidget);
+    expect(find.text('워러'), findsWidgets); // 미국식
+    expect(find.text('워터'), findsOneWidget); // 영국식
+    expect(find.textContaining('굴리는 t'), findsOneWidget);
+  });
+ }

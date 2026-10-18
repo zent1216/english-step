@@ -443,7 +443,19 @@ class _SongPracticeScreenState extends State<SongPracticeScreen> {
             child: SingleChildScrollView(
               padding: const EdgeInsets.only(bottom: 120),
               child: Column(
-                children: [for (var i = 0; i < lines.length; i++) _line(i, cur)],
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 2),
+                    child: Text(
+                      '가사 줄을 누르면 그 줄로 이동, 단어를 길게 누르면 뜻과 미국식·영국식 발음이 나와요.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                  for (var i = 0; i < lines.length; i++) _line(i, cur),
+                ],
               ),
             ),
           ),
@@ -629,7 +641,7 @@ class _SongPracticeScreenState extends State<SongPracticeScreen> {
     final revealed = _stage == 0 || _revealed.contains(i);
     final Widget en;
     if (revealed) {
-      en = MarkedText(l.en, size: 19);
+      en = MarkedText(l.en, size: 19, ko: l.ko, longPress: true, onBeforeWord: _pause);
     } else if (_stage == 3) {
       en = Text('♪ · · ·', style: englishStyle(context, size: 19).copyWith(color: scheme.outline));
     } else {
